@@ -2,9 +2,12 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#f3ecfb" />
-  <title>تلوين بالبكسل — Pixel Atelier</title>
+  <meta name="description" content="ألعاب فنية تفاعلية — تلوين بالبكسل وبازل الصور" />
+  <title>ألعاب البكسل — الرئيسية</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="manifest" href="manifest.json" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet" />
@@ -15,208 +18,66 @@
   <div class="blob b2" aria-hidden="true"></div>
   <div class="blob b3" aria-hidden="true"></div>
 
-  <nav class="site-nav" aria-label="التنقل">
-    <a href="index.html" class="active">🎨 تلوين بالبكسل</a>
-    <a href="puzzle-game.html">🧩 بازل الصور</a>
-  </nav>
+  <main class="landing">
+    <header class="landing-hero">
+      <p class="eyebrow">ألعاب فنية تفاعلية</p>
+      <h1>عالم البكسل</h1>
+      <p class="lead">لعبتان ممتعتان لتمضية الوقت — حوّل صورك إلى فن بكسل أو اجمع قطع البازل.</p>
+    </header>
 
-  <div class="app" id="app">
-    <!-- SETUP -->
-    <section class="screen setup" id="setup">
-      <header class="hero">
-        <p class="eyebrow">Pixel Atelier</p>
-        <h1>تلوين بالبكسل</h1>
-        <p class="lead">حمّل صورة، حوّلها إلى شبكة دقيقة، ولوّن كل بكسل حسب رقمه.</p>
-      </header>
-
-      <div class="setup-layout">
-        <div class="col-main">
-          <label class="dropzone" id="dropzone" for="file-input">
-            <input type="file" id="file-input" accept="image/*" hidden />
-            <div class="drop-mark" aria-hidden="true"></div>
-            <strong>أسقط صورة أو اختر ملفاً</strong>
-            <small>JPG · PNG · WebP</small>
-          </label>
-
-          <div class="preview-band" id="preview-row" hidden>
-            <div class="compare">
-              <figure>
-                <figcaption>الأصلية <small id="source-meta"></small></figcaption>
-                <canvas id="preview-original" width="280" height="280"></canvas>
-              </figure>
-              <figure class="result">
-                <figcaption>بعد التحويل <small id="pixel-meta"></small></figcaption>
-                <canvas id="preview-pixel" width="280" height="280"></canvas>
-              </figure>
-            </div>
-            <div class="fidelity" id="fidelity-box">
-              <div class="fidelity-score">
-                <strong id="fidelity-value">—</strong>
-                <span>دقة التحويل</span>
-              </div>
-              <ul>
-                <li><span>الشبكة</span><strong id="est-cells">0</strong></li>
-                <li><span>الألوان</span><strong id="est-colors">0</strong></li>
-                <li><span>الوقت</span><strong id="est-time">—</strong></li>
-              </ul>
-            </div>
-          </div>
+    <div class="game-cards">
+      <a href="color.html" class="game-card">
+        <div class="game-card-icon" aria-hidden="true">
+          <canvas id="card-pixel" width="80" height="80"></canvas>
         </div>
+        <h2>تلوين بالبكسل</h2>
+        <p>حمّل صورة، حوّلها إلى شبكة دقيقة، ولوّن كل بكسل حسب رقمه.</p>
+        <span class="game-card-cta">ابدأ التلوين ←</span>
+      </a>
 
-        <aside class="col-side">
-          <section class="panel">
-            <h2>1 · الدقة</h2>
-            <div class="presets" id="difficulty-presets">
-              <button type="button" class="chip" data-grid="24" data-colors="12" data-quality="draft">خفيف</button>
-              <button type="button" class="chip active" data-grid="48" data-colors="24" data-quality="balanced">متوازن</button>
-              <button type="button" class="chip" data-grid="72" data-colors="36" data-quality="max">دقيق</button>
-              <button type="button" class="chip" data-grid="104" data-colors="52" data-quality="max">فائق</button>
-            </div>
-
-            <label class="field">
-              <div class="field-top"><span>حجم الشبكة</span><em id="grid-size-label">48</em></div>
-              <input type="range" id="grid-size" min="16" max="128" value="48" />
-            </label>
-            <label class="field">
-              <div class="field-top"><span>عدد الألوان</span><em id="color-count-label">24</em></div>
-              <input type="range" id="color-count" min="4" max="64" value="24" />
-            </label>
-          </section>
-
-          <section class="panel">
-            <h2>2 · أسلوب التحويل</h2>
-            <label class="field">
-              <div class="field-top"><span>الجودة</span><em id="quality-label">متوازنة</em></div>
-              <select id="quality-mode" class="select">
-                <option value="draft">سريعة</option>
-                <option value="balanced" selected>متوازنة</option>
-                <option value="max">أقصى دقة</option>
-              </select>
-            </label>
-            <label class="field">
-              <div class="field-top"><span>قصّ الصورة</span></div>
-              <select id="fit-mode" class="select">
-                <option value="cover" selected>ملء (تفاصيل أكثر)</option>
-                <option value="contain">احتواء كامل</option>
-              </select>
-            </label>
-            <div class="toggles">
-              <label class="switch"><input type="checkbox" id="edge-toggle" checked /><span>حفظ الحواف</span></label>
-              <label class="switch"><input type="checkbox" id="dither-toggle" /><span>تنعيم التدرّج</span></label>
-            </div>
-          </section>
-
-          <section class="panel">
-            <h2>نماذج</h2>
-            <div class="gallery-row" id="demo-gallery"></div>
-          </section>
-
-          <div class="setup-actions">
-            <p class="analyzing" id="analyzing" hidden>جارٍ التحويل بدقة…</p>
-            <button type="button" id="start-btn" class="btn primary" disabled>ابدأ التلوين</button>
-            <button type="button" id="resume-btn" class="btn ghost" hidden>متابعة آخر جلسة</button>
-          </div>
-        </aside>
-      </div>
-    </section>
-
-    <!-- WORKSPACE -->
-    <section class="screen workspace" id="workspace" hidden>
-      <header class="bar">
-        <div class="bar-start">
-          <button type="button" id="back-btn" class="icon-btn" title="عودة">→</button>
-          <div class="bar-title">
-            <strong>Pixel Atelier</strong>
-            <small id="session-title">جلسة</small>
-          </div>
+      <a href="puzzle-game.html" class="game-card">
+        <div class="game-card-icon" aria-hidden="true">
+          <canvas id="card-puzzle" width="80" height="80"></canvas>
         </div>
+        <h2>بازل الصور</h2>
+        <p>اضغط قطعتين لتبديلهما حتى تكتمل الصورة — من السهل إلى المستحيل.</p>
+        <span class="game-card-cta">ابدأ اللعب ←</span>
+      </a>
+    </div>
 
-        <div class="bar-meter">
-          <div class="meter-bar"><span id="progress-fill"></span></div>
-          <div class="meter-meta">
-            <span id="progress-text">0%</span>
-            <span id="cells-text">0/0</span>
-            <span id="timer-text">00:00</span>
-          </div>
-        </div>
+    <footer class="landing-footer">صنعت بحب لتمضية الوقت ✨</footer>
+  </main>
 
-        <div class="bar-end">
-          <button type="button" id="sound-btn" class="icon-btn" title="صوت" aria-pressed="true">♪</button>
-          <button type="button" id="export-btn" class="btn compact">تصدير</button>
-        </div>
-      </header>
+  <script>
+    (function () {
+      const px = document.getElementById("card-pixel").getContext("2d");
+      const colors = ["#b7a4e0", "#f2b8c6", "#a8d8cf", "#f7d9a8", "#9fc7e8"];
+      for (let y = 0; y < 10; y++) {
+        for (let x = 0; x < 10; x++) {
+          px.fillStyle = colors[(x + y) % colors.length];
+          px.fillRect(x * 8, y * 8, 8, 8);
+        }
+      }
 
-      <div class="studio">
-        <aside class="rail">
-          <div class="rail-block">
-            <span>رسم</span>
-            <button type="button" class="tool active" id="tool-brush" data-tool="brush" title="فرشاة (B)">✎</button>
-            <button type="button" class="tool" id="tool-fill" data-tool="fill" title="ملء (F)">◫</button>
-            <button type="button" class="tool" id="tool-pan" data-tool="pan" title="تحريك">✥</button>
-          </div>
-          <div class="rail-block">
-            <span>عرض</span>
-            <button type="button" class="tool" id="focus-btn" title="تركيز اللون" aria-pressed="false">◎</button>
-            <button type="button" class="tool" id="hint-btn" title="معاينة" aria-pressed="false">◉</button>
-            <button type="button" class="tool" id="grid-btn" title="شبكة" aria-pressed="true">▦</button>
-            <button type="button" class="tool" id="ref-btn" title="مرجع" aria-pressed="false">▣</button>
-          </div>
-          <div class="rail-block">
-            <span>تعديل</span>
-            <button type="button" class="tool" id="undo-btn" title="تراجع" disabled>↶</button>
-            <button type="button" class="tool" id="redo-btn" title="إعادة" disabled>↷</button>
-            <button type="button" class="tool danger" id="reset-btn" title="مسح">⌫</button>
-          </div>
-        </aside>
-
-        <div class="stage" id="stage">
-          <canvas id="board" width="800" height="800"></canvas>
-          <canvas id="overlay-fx" class="overlay-fx" width="800" height="800"></canvas>
-          <div id="wrong-flash" class="wrong-flash" hidden></div>
-          <img id="ref-image" class="ref-image" alt="" hidden />
-
-          <div class="view-controls" id="nav-dock">
-            <div class="vc-zoom">
-              <button type="button" id="zoom-out" class="vc-btn" title="تصغير">−</button>
-              <input type="range" id="zoom-slider" min="50" max="600" value="100" step="5" />
-              <button type="button" id="zoom-in" class="vc-btn" title="تكبير">+</button>
-              <b id="zoom-label">100%</b>
-            </div>
-            <div class="vc-pad">
-              <button type="button" class="vc-btn" id="pan-up" title="أعلى">▲</button>
-              <button type="button" class="vc-btn" id="pan-left" title="يسار">◀</button>
-              <button type="button" class="vc-btn accent" id="zoom-fit" title="توسيط">●</button>
-              <button type="button" class="vc-btn" id="pan-right" title="يمين">▶</button>
-              <button type="button" class="vc-btn" id="pan-down" title="أسفل">▼</button>
-            </div>
-          </div>
-
-          <div id="done-banner" class="done-banner" hidden>
-            <div class="done-card">
-              <p class="eyebrow">مكتمل</p>
-              <h2>أحسنت!</h2>
-              <p id="done-stats">—</p>
-              <button type="button" id="done-export" class="btn primary">حفظ PNG</button>
-              <button type="button" id="done-again" class="btn ghost">جلسة جديدة</button>
-            </div>
-          </div>
-        </div>
-
-        <aside class="colors">
-          <div class="colors-head">
-            <h2>الألوان</h2>
-            <label class="switch dense">
-              <input type="checkbox" id="auto-next" checked />
-              <span>تلقائي</span>
-            </label>
-          </div>
-          <div class="palette" id="palette"></div>
-        </aside>
-      </div>
-    </section>
-  </div>
-
-  <div id="toast" class="toast" hidden></div>
-  <script src="game.js"></script>
+      const pz = document.getElementById("card-puzzle").getContext("2d");
+      const g = pz.createLinearGradient(0, 0, 80, 80);
+      g.addColorStop(0, "#cfe8f7");
+      g.addColorStop(1, "#fdeee2");
+      pz.fillStyle = g;
+      pz.fillRect(0, 0, 80, 80);
+      for (let r = 0; r < 3; r++) {
+        for (let c = 0; c < 3; c++) {
+          pz.strokeStyle = "#fff";
+          pz.lineWidth = 2;
+          pz.strokeRect(c * 26 + 1, r * 26 + 1, 24, 24);
+          pz.fillStyle = colors[(r * 3 + c) % colors.length];
+          pz.globalAlpha = 0.5;
+          pz.fillRect(c * 26 + 3, r * 26 + 3, 20, 20);
+          pz.globalAlpha = 1;
+        }
+      }
+    })();
+  </script>
+  <script src="pwa-register.js"></script>
 </body>
 </html>

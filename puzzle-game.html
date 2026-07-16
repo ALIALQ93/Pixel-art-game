@@ -4,7 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#f3ecfb">
+<meta name="description" content="لعبة بازل صور — اجمع القطع حتى تكتمل الصورة">
 <title>بازل الصور — لعبة تجميع</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.json">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
 <style>
   :root{
@@ -115,7 +118,8 @@
   .win-emoji{font-size:3.4rem;display:inline-block;animation:bounce 1s ease infinite}
   @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px) rotate(8deg)}}
   .win-card h2{font-size:1.7rem;font-weight:800;margin:8px 0 4px;color:#8a76c4}
-  .win-card p{color:var(--ink-soft);margin-bottom:18px}
+  .win-card p{color:var(--ink-soft);margin-bottom:12px}
+  .win-card .btn-new{margin:4px}
   #confetti{position:fixed;inset:0;z-index:19;pointer-events:none}
 
   footer{position:relative;z-index:2;margin-top:22px;color:var(--ink-soft);font-size:.78rem}
@@ -141,7 +145,8 @@
 <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
 
 <nav class="site-nav" aria-label="التنقل">
-  <a href="index.html">🎨 تلوين بالبكسل</a>
+  <a href="index.html">🏠 الرئيسية</a>
+  <a href="color.html">🎨 تلوين بالبكسل</a>
   <a href="puzzle-game.html" class="active">🧩 بازل الصور</a>
 </nav>
 
@@ -188,6 +193,7 @@
     <span class="win-emoji">🎉</span>
     <h2>أحسنت! اكتملت الصورة</h2>
     <p id="winStats"></p>
+    <button class="btn-new" id="btnShare">📤 مشاركة</button>
     <button class="btn-new" id="btnAgain">🎨 لعبة جديدة</button>
   </div>
 </div>
@@ -465,7 +471,34 @@ document.getElementById('fileInput').addEventListener('change',e=>{
 
 document.getElementById('btnNew').addEventListener('click',()=>{customImage=false;newGame(true);});
 document.getElementById('btnAgain').addEventListener('click',()=>newGame(true));
+document.getElementById('btnShare').addEventListener('click',sharePuzzle);
 document.getElementById('btnShuffle').addEventListener('click',()=>{resetStats();buildBoard();});
+
+async function sharePuzzle(){
+  const c=document.createElement('canvas');
+  c.width=c.height=600;
+  const ctx=c.getContext('2d');
+  const img=new Image();
+  img.src=imgURL;
+  await new Promise((res,rej)=>{img.onload=res;img.onerror=rej;});
+  ctx.drawImage(img,0,0,600,600);
+  const text=`أكملت بازل الصور! ${moves} حركة خلال ${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`;
+  const blob=await new Promise(r=>c.toBlob(r,'image/png'));
+  if(!blob)return;
+  const file=new File([blob],'puzzle.png',{type:'image/png'});
+  if(navigator.share){
+    try{
+      const payload={title:'بازل الصور',text};
+      if(navigator.canShare&&navigator.canShare({files:[file]}))payload.files=[file];
+      await navigator.share(payload);
+      return;
+    }catch(e){if(e.name==='AbortError')return;}
+  }
+  try{
+    await navigator.clipboard.writeText(text+'\n'+location.href);
+  }catch(_){}
+}
+
 document.getElementById('diffSelect').addEventListener('change',function(){
   N=+this.value;
   newGame(false);
@@ -473,5 +506,6 @@ document.getElementById('diffSelect').addEventListener('change',function(){
 
 newGame(true);
 </script>
+<script src="pwa-register.js"></script>
 </body>
 </html>

@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#f3ecfb" />
+  <meta name="description" content="حوّل صورك إلى فن بكسل ولوّن كل بكسل حسب رقمه" />
+  <title>تلوين بالبكسل — Pixel Atelier</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="blob b1" aria-hidden="true"></div>
+  <div class="blob b2" aria-hidden="true"></div>
+  <div class="blob b3" aria-hidden="true"></div>
+
+  <nav class="site-nav" aria-label="التنقل">
+    <a href="index.html">🏠 الرئيسية</a>
+    <a href="color.html" class="active">🎨 تلوين بالبكسل</a>
+    <a href="puzzle-game.html">🧩 بازل الصور</a>
+  </nav>
+
+  <div class="app" id="app">
+    <!-- SETUP -->
+    <section class="screen setup" id="setup">
+      <header class="hero">
+        <p class="eyebrow">Pixel Atelier</p>
+        <h1>تلوين بالبكسل</h1>
+        <p class="lead">حمّل صورة، حوّلها إلى شبكة دقيقة، ولوّن كل بكسل حسب رقمه.</p>
+      </header>
+
+      <div class="setup-layout">
+        <div class="col-main">
+          <label class="dropzone" id="dropzone" for="file-input">
+            <input type="file" id="file-input" accept="image/*" hidden />
+            <div class="drop-mark" aria-hidden="true"></div>
+            <strong>أسقط صورة أو اختر ملفاً</strong>
+            <small>JPG · PNG · WebP</small>
+          </label>
+
+          <div class="preview-band" id="preview-row" hidden>
+            <div class="compare">
+              <figure>
+                <figcaption>الأصلية <small id="source-meta"></small></figcaption>
+                <canvas id="preview-original" width="280" height="280"></canvas>
+              </figure>
+              <figure class="result">
+                <figcaption>بعد التحويل <small id="pixel-meta"></small></figcaption>
+                <canvas id="preview-pixel" width="280" height="280"></canvas>
+              </figure>
+            </div>
+            <div class="fidelity" id="fidelity-box">
+              <div class="fidelity-score">
+                <strong id="fidelity-value">—</strong>
+                <span>دقة التحويل</span>
+              </div>
+              <ul>
+                <li><span>الشبكة</span><strong id="est-cells">0</strong></li>
+                <li><span>الألوان</span><strong id="est-colors">0</strong></li>
+                <li><span>الوقت</span><strong id="est-time">—</strong></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <aside class="col-side">
+          <section class="panel">
+            <h2>1 · الدقة</h2>
+            <div class="presets" id="difficulty-presets">
+              <button type="button" class="chip" data-grid="24" data-colors="12" data-quality="draft">خفيف</button>
+              <button type="button" class="chip active" data-grid="48" data-colors="24" data-quality="balanced">متوازن</button>
+              <button type="button" class="chip" data-grid="72" data-colors="36" data-quality="max">دقيق</button>
+              <button type="button" class="chip" data-grid="104" data-colors="52" data-quality="max">فائق</button>
+            </div>
+
+            <label class="field">
+              <div class="field-top"><span>حجم الشبكة</span><em id="grid-size-label">48</em></div>
+              <input type="range" id="grid-size" min="16" max="128" value="48" />
+            </label>
+            <label class="field">
+              <div class="field-top"><span>عدد الألوان</span><em id="color-count-label">24</em></div>
+              <input type="range" id="color-count" min="4" max="64" value="24" />
+            </label>
+          </section>
+
+          <section class="panel">
+            <h2>2 · أسلوب التحويل</h2>
+            <label class="field">
+              <div class="field-top"><span>الجودة</span><em id="quality-label">متوازنة</em></div>
+              <select id="quality-mode" class="select">
+                <option value="draft">سريعة</option>
+                <option value="balanced" selected>متوازنة</option>
+                <option value="max">أقصى دقة</option>
+              </select>
+            </label>
+            <label class="field">
+              <div class="field-top"><span>قصّ الصورة</span></div>
+              <select id="fit-mode" class="select">
+                <option value="cover" selected>ملء (تفاصيل أكثر)</option>
+                <option value="contain">احتواء كامل</option>
+              </select>
+            </label>
+            <div class="toggles">
+              <label class="switch"><input type="checkbox" id="edge-toggle" checked /><span>حفظ الحواف</span></label>
+              <label class="switch"><input type="checkbox" id="dither-toggle" /><span>تنعيم التدرّج</span></label>
+            </div>
+          </section>
+
+          <section class="panel">
+            <h2>نماذج</h2>
+            <div class="gallery-row" id="demo-gallery"></div>
+          </section>
+
+          <div class="setup-actions">
+            <p class="analyzing" id="analyzing" hidden>جارٍ التحويل بدقة…</p>
+            <button type="button" id="start-btn" class="btn primary" disabled>ابدأ التلوين</button>
+            <button type="button" id="resume-btn" class="btn ghost" hidden>متابعة آخر جلسة</button>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- WORKSPACE -->
+    <section class="screen workspace" id="workspace" hidden>
+      <header class="bar">
+        <div class="bar-start">
+          <button type="button" id="back-btn" class="icon-btn" title="عودة">→</button>
+          <div class="bar-title">
+            <strong>Pixel Atelier</strong>
+            <small id="session-title">جلسة</small>
+          </div>
+        </div>
+
+        <div class="bar-meter">
+          <div class="meter-bar"><span id="progress-fill"></span></div>
+          <div class="meter-meta">
+            <span id="progress-text">0%</span>
+            <span id="cells-text">0/0</span>
+            <span id="timer-text">00:00</span>
+          </div>
+        </div>
+
+        <div class="bar-end">
+          <button type="button" id="sound-btn" class="icon-btn" title="صوت" aria-pressed="true">♪</button>
+          <button type="button" id="export-btn" class="btn compact">تصدير</button>
+        </div>
+      </header>
+
+      <div class="studio">
+        <aside class="rail">
+          <div class="rail-block">
+            <span>رسم</span>
+            <button type="button" class="tool active" id="tool-brush" data-tool="brush" title="فرشاة (B)">✎</button>
+            <button type="button" class="tool" id="tool-fill" data-tool="fill" title="ملء (F)">◫</button>
+            <button type="button" class="tool" id="tool-pan" data-tool="pan" title="تحريك">✥</button>
+          </div>
+          <div class="rail-block">
+            <span>عرض</span>
+            <button type="button" class="tool" id="focus-btn" title="تركيز اللون" aria-pressed="false">◎</button>
+            <button type="button" class="tool" id="hint-btn" title="معاينة" aria-pressed="false">◉</button>
+            <button type="button" class="tool" id="grid-btn" title="شبكة" aria-pressed="true">▦</button>
+            <button type="button" class="tool" id="ref-btn" title="مرجع" aria-pressed="false">▣</button>
+          </div>
+          <div class="rail-block">
+            <span>تعديل</span>
+            <button type="button" class="tool" id="undo-btn" title="تراجع" disabled>↶</button>
+            <button type="button" class="tool" id="redo-btn" title="إعادة" disabled>↷</button>
+            <button type="button" class="tool danger" id="reset-btn" title="مسح">⌫</button>
+          </div>
+        </aside>
+
+        <div class="stage" id="stage">
+          <canvas id="board" width="800" height="800"></canvas>
+          <canvas id="overlay-fx" class="overlay-fx" width="800" height="800"></canvas>
+          <div id="wrong-flash" class="wrong-flash" hidden></div>
+          <img id="ref-image" class="ref-image" alt="" hidden />
+
+          <div class="view-controls" id="nav-dock">
+            <div class="vc-zoom">
+              <button type="button" id="zoom-out" class="vc-btn" title="تصغير">−</button>
+              <input type="range" id="zoom-slider" min="50" max="600" value="100" step="5" />
+              <button type="button" id="zoom-in" class="vc-btn" title="تكبير">+</button>
+              <b id="zoom-label">100%</b>
+            </div>
+            <div class="vc-pad">
+              <button type="button" class="vc-btn" id="pan-up" title="أعلى">▲</button>
+              <button type="button" class="vc-btn" id="pan-left" title="يسار">◀</button>
+              <button type="button" class="vc-btn accent" id="zoom-fit" title="توسيط">●</button>
+              <button type="button" class="vc-btn" id="pan-right" title="يمين">▶</button>
+              <button type="button" class="vc-btn" id="pan-down" title="أسفل">▼</button>
+            </div>
+          </div>
+
+          <div id="done-banner" class="done-banner" hidden>
+            <div class="done-card">
+              <p class="eyebrow">مكتمل</p>
+              <h2>أحسنت!</h2>
+              <p id="done-stats">—</p>
+              <div class="done-actions">
+                <button type="button" id="done-export" class="btn primary">حفظ PNG</button>
+                <button type="button" id="done-share" class="btn ghost">مشاركة</button>
+                <button type="button" id="done-again" class="btn ghost">جلسة جديدة</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <aside class="colors">
+          <div class="colors-head">
+            <h2>الألوان</h2>
+            <label class="switch dense">
+              <input type="checkbox" id="auto-next" checked />
+              <span>تلقائي</span>
+            </label>
+          </div>
+          <div class="palette" id="palette"></div>
+        </aside>
+      </div>
+    </section>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+  <script src="game.js"></script>
+  <script src="pwa-register.js"></script>
+</body>
+</html>

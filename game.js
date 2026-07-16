@@ -1363,7 +1363,7 @@
     els.soundBtn.setAttribute("aria-pressed", String(state.soundOn));
   }
 
-  function exportPNG() {
+  function renderExportCanvas() {
     const gw = state.gridW;
     const gh = state.gridH;
     const scale = Math.max(8, Math.min(20, (1280 / Math.max(gw, gh)) | 0));
@@ -1383,11 +1383,48 @@
         cctx.fillRect(x * scale, y * scale, scale, scale);
       }
     }
+    return c;
+  }
+
+  function exportPNG() {
+    const c = renderExportCanvas();
     const a = document.createElement("a");
     a.href = c.toDataURL("image/png");
     a.download = (state.sourceName || "pixel-atelier") + ".png";
     a.click();
     toast("تم التصدير");
+  }
+
+  async function shareResult() {
+    const c = renderExportCanvas();
+    const name = (state.sourceName || "pixel-atelier") + ".png";
+    const text = 'أكملت تلوين "' + state.sourceName + '"!';
+    const blob = await new Promise((resolve) => c.toBlob(resolve, "image/png"));
+    if (!blob) {
+      toast("تعذّرت المشاركة");
+      return;
+    }
+    const file = new File([blob], name, { type: "image/png" });
+    if (navigator.share) {
+      try {
+        const payload = { title: "تلوين بالبكسل", text };
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          payload.files = [file];
+        }
+        await navigator.share(payload);
+        toast("تمت المشاركة");
+        return;
+      } catch (err) {
+        if (err.name === "AbortError") return;
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(text + "\n" + location.origin + location.pathname);
+      toast("تم نسخ النص");
+    } catch (_) {
+      exportPNG();
+      toast("تم التحميل بدلاً من المشاركة");
+    }
   }
 
   // ——— Events ———
@@ -1455,6 +1492,7 @@
   $("done-again").addEventListener("click", leaveWorkspace);
   $("export-btn").addEventListener("click", exportPNG);
   $("done-export").addEventListener("click", exportPNG);
+  $("done-share").addEventListener("click", shareResult);
 
   $("tool-brush").addEventListener("click", () => setTool("brush"));
   $("tool-fill").addEventListener("click", () => setTool("fill"));

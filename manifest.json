@@ -1,0 +1,25 @@
+{
+  "name": "ألعاب البكسل",
+  "short_name": "البكسل",
+  "description": "تلوين بالبكسل وبازل الصور — ألعاب فنية تفاعلية",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f3ecfb",
+  "theme_color": "#f3ecfb",
+  "icons": [
+    {
+      "src": "icons/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
