@@ -206,7 +206,7 @@
   }
 
   function fitImage(ctx2, img, size, mode) {
-    ctx2.fillStyle = "#0a0e12";
+    ctx2.fillStyle = "#fdf6f0";
     ctx2.fillRect(0, 0, size, size);
     const scale =
       mode === "cover"
@@ -234,7 +234,7 @@
 
   /** Draw source into canvas using cover/contain */
   function drawFitted(t, img, w, h, fit) {
-    t.fillStyle = fit === "contain" ? "#ffffff" : "#000000";
+    t.fillStyle = fit === "contain" ? "#ffffff" : "#fdf6f0";
     t.fillRect(0, 0, w, h);
     const scale =
       fit === "cover"
@@ -599,7 +599,7 @@
     // Preview with correct aspect
     const pw = els.previewPixel.width;
     const ph = els.previewPixel.height;
-    pixCtx.fillStyle = "#0a0e12";
+    pixCtx.fillStyle = "#fdf6f0";
     pixCtx.fillRect(0, 0, pw, ph);
     const cell = Math.min(pw / gw, ph / gh);
     const ox = (pw - cell * gw) / 2;
@@ -720,7 +720,7 @@
     } else {
       // geometric
       x.fillStyle = "#14202b"; x.fillRect(0, 0, 160, 160);
-      const cols = ["#3ec6c2", "#f0b45a", "#7aa2ff", "#e06a6a", "#6dce8b"];
+      const cols = ["#b7a4e0", "#f0b45a", "#9fc7e8", "#f2b8c6", "#a8d8cf"];
       for (let i = 0; i < 18; i++) {
         x.fillStyle = cols[i % cols.length];
         const s = 18 + (i % 5) * 8;
@@ -1031,7 +1031,7 @@
         vx: (Math.random() - 0.5) * 6,
         vy: -Math.random() * 5 - 1,
         life: 40 + Math.random() * 30,
-        color: state.palette[(Math.random() * state.palette.length) | 0]?.hex || "#3ec6c2",
+        color: state.palette[(Math.random() * state.palette.length) | 0]?.hex || "#b7a4e0",
         size: 2 + Math.random() * 4,
       });
     }
@@ -1195,17 +1195,17 @@
     const m = boardMetrics();
     ctx.clearRect(0, 0, m.viewW, m.viewH);
 
-    ctx.fillStyle = "#0d1218";
+    ctx.fillStyle = "#fdf6f0";
     ctx.fillRect(0, 0, m.viewW, m.viewH);
 
-    ctx.fillStyle = "#1a222c";
+    ctx.fillStyle = "#ffffff";
     ctx.fillRect(m.ox - 6, m.oy - 6, m.sizeW + 12, m.sizeH + 12);
 
     const fontSize = Math.max(6, Math.min(20, m.cell * 0.4));
     const showNums = m.cell >= 9 && state.palette.length <= 64;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.font = "700 " + fontSize + "px Cairo, sans-serif";
+    ctx.font = "700 " + fontSize + "px Tajawal, sans-serif";
 
     for (let y = 0; y < m.gh; y++) {
       for (let x = 0; x < m.gw; x++) {
@@ -1233,7 +1233,7 @@
           ctx.globalAlpha = 1;
 
           if (isSel) {
-            ctx.fillStyle = "rgba(62, 198, 194, 0.22)";
+            ctx.fillStyle = "rgba(183, 164, 224, 0.28)";
             ctx.fillRect(px, py, m.cell + 0.5, m.cell + 0.5);
           }
 
@@ -1247,7 +1247,7 @@
         }
 
         if (state.showGrid && m.cell > 4) {
-          ctx.strokeStyle = "rgba(0,0,0,0.08)";
+          ctx.strokeStyle = "rgba(183, 164, 224, 0.15)";
           ctx.lineWidth = Math.max(1, m.cell * 0.03);
           ctx.strokeRect(px + 0.5, py + 0.5, m.cell - 1, m.cell - 1);
         }
@@ -1257,7 +1257,7 @@
     if (state.hoverCell >= 0 && !state.completed) {
       const hx = state.hoverCell % m.gw;
       const hy = (state.hoverCell / m.gw) | 0;
-      ctx.strokeStyle = "rgba(62, 198, 194, 0.9)";
+      ctx.strokeStyle = "rgba(138, 118, 196, 0.95)";
       ctx.lineWidth = Math.max(1.5, m.cell * 0.08);
       ctx.strokeRect(m.ox + hx * m.cell + 1, m.oy + hy * m.cell + 1, m.cell - 2, m.cell - 2);
     }

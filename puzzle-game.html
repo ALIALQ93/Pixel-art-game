@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#f3ecfb">
 <title>بازل الصور — لعبة تجميع</title>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
 <style>
@@ -118,10 +119,31 @@
   #confetti{position:fixed;inset:0;z-index:19;pointer-events:none}
 
   footer{position:relative;z-index:2;margin-top:22px;color:var(--ink-soft);font-size:.78rem}
+
+  /* تنقل موحّد */
+  .site-nav{
+    position:relative;z-index:2;display:flex;align-items:center;justify-content:center;
+    gap:8px;flex-wrap:wrap;margin-bottom:14px;
+    animation:dropIn .7s cubic-bezier(.2,.9,.3,1.2) both;
+  }
+  .site-nav a{
+    font:inherit;font-size:.88rem;font-weight:700;color:var(--ink);text-decoration:none;
+    padding:8px 16px;border-radius:999px;background:var(--card);backdrop-filter:blur(8px);
+    border:1px solid #fff;box-shadow:var(--shadow);transition:transform .2s,filter .2s;
+  }
+  .site-nav a:hover{transform:translateY(-2px);filter:brightness(1.03)}
+  .site-nav a.active{
+    background:linear-gradient(135deg,var(--accent),#9d86d4);color:#fff;border-color:transparent;
+  }
 </style>
 </head>
 <body>
 <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+
+<nav class="site-nav" aria-label="التنقل">
+  <a href="index.html">🎨 تلوين بالبكسل</a>
+  <a href="puzzle-game.html" class="active">🧩 بازل الصور</a>
+</nav>
 
 <header>
   <h1>🧩 بازل الصور</h1>
