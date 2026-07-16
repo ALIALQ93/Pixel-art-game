@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>بازل الصور — لعبة تجميع</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg1:#fdf6f0; --bg2:#f3ecfb; --bg3:#e8f4f2;
+    --card:#ffffffcc;
+    --ink:#5b5468; --ink-soft:#9a91a8;
+    --accent:#b7a4e0; --accent2:#f2b8c6; --accent3:#a8d8cf; --accent4:#f7d9a8;
+    --shadow:0 10px 30px rgba(120,100,160,.14);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{
+    font-family:'Tajawal',sans-serif;color:var(--ink);
+    min-height:100vh;display:flex;flex-direction:column;align-items:center;
+    background:linear-gradient(160deg,var(--bg1) 0%,var(--bg2) 55%,var(--bg3) 100%);
+    overflow-x:hidden; padding:20px 14px 40px;
+  }
+  /* فقاعات خلفية عائمة */
+  .blob{position:fixed;border-radius:50%;filter:blur(60px);opacity:.45;z-index:0;pointer-events:none;animation:float 14s ease-in-out infinite}
+  .b1{width:340px;height:340px;background:#f2b8c655;top:-80px;right:-80px}
+  .b2{width:300px;height:300px;background:#b7a4e055;bottom:-60px;left:-70px;animation-delay:-5s}
+  .b3{width:240px;height:240px;background:#a8d8cf55;top:40%;left:-90px;animation-delay:-9s}
+  @keyframes float{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-30px) scale(1.06)}}
+
+  header{position:relative;z-index:2;text-align:center;margin-bottom:14px;animation:dropIn .7s cubic-bezier(.2,.9,.3,1.2) both}
+  @keyframes dropIn{from{opacity:0;transform:translateY(-24px)}to{opacity:1;transform:none}}
+  h1{font-size:clamp(1.5rem,4.5vw,2.2rem);font-weight:800;
+     background:linear-gradient(90deg,#a58fd8,#e79aae,#7fc4b8);
+     -webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{color:var(--ink-soft);font-size:.95rem;margin-top:2px}
+
+  /* شريط المعلومات */
+  .hud{position:relative;z-index:2;display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-bottom:14px;animation:dropIn .7s .1s both}
+  .stat{background:var(--card);backdrop-filter:blur(8px);border:1px solid #fff;
+    border-radius:16px;padding:8px 18px;box-shadow:var(--shadow);text-align:center;min-width:86px}
+  .stat .label{font-size:.72rem;color:var(--ink-soft)}
+  .stat .value{font-size:1.25rem;font-weight:800;font-variant-numeric:tabular-nums}
+  .stat .value.pulse{animation:pop .3s ease}
+  @keyframes pop{50%{transform:scale(1.25)}}
+
+  /* المعاينة */
+  .preview-wrap{position:relative;z-index:2;display:flex;align-items:center;gap:8px;margin-bottom:14px;animation:dropIn .7s .15s both}
+  .preview{width:64px;height:64px;border-radius:14px;border:3px solid #fff;box-shadow:var(--shadow);
+    background-size:cover;cursor:pointer;transition:transform .35s cubic-bezier(.2,.9,.3,1.4)}
+  .preview:hover{transform:scale(2.2) rotate(-2deg);z-index:5}
+  .preview-label{font-size:.8rem;color:var(--ink-soft)}
+
+  /* اللوحة */
+  .board-wrap{position:relative;z-index:2;animation:zoomIn .6s .2s cubic-bezier(.2,.9,.3,1.2) both}
+  @keyframes zoomIn{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:none}}
+  #board{
+    position:relative;border-radius:22px;background:#ffffff88;backdrop-filter:blur(8px);
+    border:1px solid #fff;box-shadow:var(--shadow);padding:10px;touch-action:manipulation;
+    direction:ltr;
+  }
+  .tile{
+    position:absolute;top:0;left:0;border-radius:12px;cursor:pointer;background-repeat:no-repeat;
+    box-shadow:0 3px 10px rgba(120,100,160,.18);
+    transition:transform .45s cubic-bezier(.25,.9,.3,1.15), box-shadow .25s, filter .25s, opacity .4s;
+    will-change:transform;
+  }
+  .tile:hover{filter:brightness(1.07);box-shadow:0 8px 22px rgba(120,100,160,.3);z-index:3}
+  .tile.selected{
+    outline:3px solid var(--accent);outline-offset:-3px;filter:brightness(1.1);
+    animation:wiggle .5s ease infinite alternate;z-index:4;
+  }
+  @keyframes wiggle{from{scale:1.03;rotate:-1.2deg}to{scale:1.06;rotate:1.2deg}}
+  .tile.correct-flash{animation:correctGlow .7s ease}
+  @keyframes correctGlow{
+    0%{box-shadow:0 0 0 0 #a8d8cf00}
+    40%{box-shadow:0 0 0 6px #a8d8cfaa;filter:brightness(1.2)}
+    100%{box-shadow:0 3px 10px rgba(120,100,160,.18)}
+  }
+  .tile.locked{cursor:default}
+  .tile.enter{opacity:0;transform:scale(.3) rotate(15deg)}
+
+  /* الأزرار */
+  .controls{position:relative;z-index:2;display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:18px;animation:dropIn .7s .3s both}
+  button{
+    font-family:inherit;font-size:.95rem;font-weight:700;color:#fff;border:none;cursor:pointer;
+    padding:11px 22px;border-radius:16px;box-shadow:var(--shadow);
+    transition:transform .2s cubic-bezier(.2,.9,.3,1.5), box-shadow .2s, filter .2s;
+  }
+  button:hover{transform:translateY(-3px) scale(1.04);filter:brightness(1.05)}
+  button:active{transform:translateY(0) scale(.96)}
+  .btn-new{background:linear-gradient(135deg,#b7a4e0,#9d86d4)}
+  .btn-upload{background:linear-gradient(135deg,#f7c59f,#eda96e)}
+  .btn-shuffle{background:linear-gradient(135deg,#f2b8c6,#e79aae)}
+  #diffSelect{
+    font-family:inherit;font-size:.95rem;font-weight:700;color:#fff;border:none;cursor:pointer;
+    padding:11px 18px;border-radius:16px;box-shadow:var(--shadow);appearance:none;
+    background:linear-gradient(135deg,#a8d8cf,#7fc4b8);transition:transform .2s,filter .2s;
+  }
+  #diffSelect:hover{transform:translateY(-3px) scale(1.04);filter:brightness(1.05)}
+  #diffSelect option{color:var(--ink);background:#fff}
+
+  /* شاشة الفوز */
+  .win-overlay{
+    position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;
+    background:rgba(255,250,250,.55);backdrop-filter:blur(10px);
+    opacity:0;pointer-events:none;transition:opacity .5s;
+  }
+  .win-overlay.show{opacity:1;pointer-events:auto}
+  .win-card{
+    background:#fff;border-radius:28px;padding:38px 46px;text-align:center;box-shadow:0 25px 70px rgba(120,100,160,.35);
+    transform:scale(.5) rotate(-6deg);transition:transform .6s cubic-bezier(.2,.9,.3,1.4);
+  }
+  .win-overlay.show .win-card{transform:scale(1) rotate(0)}
+  .win-emoji{font-size:3.4rem;display:inline-block;animation:bounce 1s ease infinite}
+  @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px) rotate(8deg)}}
+  .win-card h2{font-size:1.7rem;font-weight:800;margin:8px 0 4px;color:#8a76c4}
+  .win-card p{color:var(--ink-soft);margin-bottom:18px}
+  #confetti{position:fixed;inset:0;z-index:19;pointer-events:none}
+
+  footer{position:relative;z-index:2;margin-top:22px;color:var(--ink-soft);font-size:.78rem}
+</style>
+</head>
+<body>
+<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+
+<header>
+  <h1>🧩 بازل الصور</h1>
+  <div class="sub">اضغط قطعتين لتبديلهما — أو اسحب قطعة فوق أخرى — حتى تكتمل الصورة</div>
+</header>
+
+<div class="hud">
+  <div class="stat"><div class="label">الحركات</div><div class="value" id="moves">0</div></div>
+  <div class="stat"><div class="label">الوقت</div><div class="value" id="timer">0:00</div></div>
+  <div class="stat"><div class="label">مكتمل</div><div class="value" id="progress">0%</div></div>
+</div>
+
+<div class="preview-wrap">
+  <div class="preview" id="preview" title="مرّر الفأرة للتكبير"></div>
+  <div class="preview-label">الصورة<br>الهدف</div>
+</div>
+
+<div class="board-wrap"><div id="board"></div></div>
+
+<div class="controls">
+  <button class="btn-new" id="btnNew">🎨 صورة جديدة</button>
+  <button class="btn-upload" id="btnUpload">📷 صورتي</button>
+  <button class="btn-shuffle" id="btnShuffle">🔀 خلط</button>
+  <select id="diffSelect" title="مستوى الصعوبة">
+    <option value="3">سهل ٣×٣</option>
+    <option value="4">متوسط ٤×٤</option>
+    <option value="5">جيد ٥×٥</option>
+    <option value="6">صعب ٦×٦</option>
+    <option value="8">محترف ٨×٨</option>
+    <option value="10">خبير ١٠×١٠</option>
+    <option value="12">أسطوري ١٢×١٢</option>
+    <option value="16">مستحيل ١٦×١٦</option>
+  </select>
+  <input type="file" id="fileInput" accept="image/*" hidden>
+</div>
+
+<footer>صنعت بحب لتمضية الوقت ✨</footer>
+
+<canvas id="confetti"></canvas>
+<div class="win-overlay" id="winOverlay">
+  <div class="win-card">
+    <span class="win-emoji">🎉</span>
+    <h2>أحسنت! اكتملت الصورة</h2>
+    <p id="winStats"></p>
+    <button class="btn-new" id="btnAgain">🎨 لعبة جديدة</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ================= الرسم الفني الإجرائي ================= */
+const ART = 600;
+function rand(a,b){return a+Math.random()*(b-a)}
+function pick(arr){return arr[Math.floor(Math.random()*arr.length)]}
+
+const artists = [
+  // 1) جبال وغروب
+  ctx=>{
+    const sky=ctx.createLinearGradient(0,0,0,ART);
+    sky.addColorStop(0,'#fde8d7');sky.addColorStop(.5,'#f9cfd8');sky.addColorStop(1,'#cbb6e8');
+    ctx.fillStyle=sky;ctx.fillRect(0,0,ART,ART);
+    ctx.fillStyle='#ffd9a0';ctx.beginPath();ctx.arc(ART*rand(.3,.7),ART*.35,70,0,7);ctx.fill();
+    ctx.fillStyle='#ffe9c9';ctx.beginPath();ctx.arc(ART*.5,ART*.35,0,0,7);ctx.fill();
+    const cols=['#b9a3dd','#a48ccf','#8f76c0'];
+    cols.forEach((c,i)=>{
+      ctx.fillStyle=c;ctx.beginPath();ctx.moveTo(0,ART);
+      let y=ART*(.55+i*.13);ctx.lineTo(0,y);
+      for(let x=0;x<=ART;x+=60)ctx.lineTo(x,y+rand(-45,45));
+      ctx.lineTo(ART,ART);ctx.fill();
+    });
+    ctx.strokeStyle='#6d5a9e';ctx.lineWidth=3;ctx.lineCap='round';
+    for(let i=0;i<5;i++){const x=rand(60,540),y=rand(80,200);
+      ctx.beginPath();ctx.arc(x-10,y,10,3.4,5.9);ctx.stroke();
+      ctx.beginPath();ctx.arc(x+10,y,10,3.5,6);ctx.stroke();}
+  },
+  // 2) مناطيد
+  ctx=>{
+    const sky=ctx.createLinearGradient(0,0,0,ART);
+    sky.addColorStop(0,'#cfe8f7');sky.addColorStop(1,'#fdeee2');
+    ctx.fillStyle=sky;ctx.fillRect(0,0,ART,ART);
+    ctx.fillStyle='#ffffffcc';
+    for(let i=0;i<6;i++){const x=rand(0,ART),y=rand(60,500),r=rand(25,45);
+      ctx.beginPath();ctx.arc(x,y,r,0,7);ctx.arc(x+r,y+8,r*.8,0,7);ctx.arc(x-r,y+8,r*.75,0,7);ctx.fill();}
+    const pal=[['#f2a9bd','#f7d9a8'],['#a8d8cf','#b7a4e0'],['#f7c59f','#9fc7e8']];
+    for(let i=0;i<3;i++){
+      const x=120+i*180+rand(-30,30),y=rand(150,320),r=rand(55,80),[c1,c2]=pal[i];
+      ctx.fillStyle=c1;ctx.beginPath();ctx.arc(x,y,r,0,7);ctx.fill();
+      ctx.fillStyle=c2;ctx.beginPath();ctx.ellipse(x,y,r*.45,r,0,0,7);ctx.fill();
+      ctx.strokeStyle='#8a7a6a';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(x-r*.5,y+r*.8);ctx.lineTo(x-14,y+r+34);
+      ctx.moveTo(x+r*.5,y+r*.8);ctx.lineTo(x+14,y+r+34);ctx.stroke();
+      ctx.fillStyle='#b08d64';ctx.fillRect(x-16,y+r+30,32,24);
+    }
+  },
+  // 3) بحر وقارب
+  ctx=>{
+    const sky=ctx.createLinearGradient(0,0,0,ART*.5);
+    sky.addColorStop(0,'#fdeacc');sky.addColorStop(1,'#fbd3c0');
+    ctx.fillStyle=sky;ctx.fillRect(0,0,ART,ART*.5);
+    ctx.fillStyle='#ffca85';ctx.beginPath();ctx.arc(ART*rand(.25,.75),ART*.3,55,0,7);ctx.fill();
+    const seaCols=['#a4d4e4','#8fc6db','#79b7d1','#65a9c7'];
+    seaCols.forEach((c,i)=>{
+      const y=ART*(.5+i*.125);ctx.fillStyle=c;ctx.beginPath();ctx.moveTo(0,y+20);
+      for(let x=0;x<=ART;x+=40)ctx.quadraticCurveTo(x+20,y+(x/40%2?0:26),x+40,y+13);
+      ctx.lineTo(ART,ART);ctx.lineTo(0,ART);ctx.fill();});
+    const bx=ART*rand(.3,.65),by=ART*.52;
+    ctx.fillStyle='#c98a5b';ctx.beginPath();
+    ctx.moveTo(bx-60,by);ctx.lineTo(bx+60,by);ctx.lineTo(bx+38,by+34);ctx.lineTo(bx-38,by+34);ctx.fill();
+    ctx.strokeStyle='#8a6242';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(bx,by);ctx.lineTo(bx,by-95);ctx.stroke();
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.moveTo(bx+4,by-95);ctx.lineTo(bx+62,by-14);ctx.lineTo(bx+4,by-14);ctx.fill();
+    ctx.fillStyle='#f2a9bd';ctx.beginPath();ctx.moveTo(bx-4,by-92);ctx.lineTo(bx-48,by-20);ctx.lineTo(bx-4,by-20);ctx.fill();
+  },
+  // 4) حقل أزهار
+  ctx=>{
+    const sky=ctx.createLinearGradient(0,0,0,ART*.55);
+    sky.addColorStop(0,'#d6ebf7');sky.addColorStop(1,'#fdf0e0');
+    ctx.fillStyle=sky;ctx.fillRect(0,0,ART,ART*.55);
+    const g=ctx.createLinearGradient(0,ART*.5,0,ART);
+    g.addColorStop(0,'#c2e3c0');g.addColorStop(1,'#96cf9c');
+    ctx.fillStyle=g;ctx.beginPath();ctx.moveTo(0,ART*.58);
+    ctx.quadraticCurveTo(ART*.5,ART*.48,ART,ART*.58);ctx.lineTo(ART,ART);ctx.lineTo(0,ART);ctx.fill();
+    ctx.fillStyle='#ffe28a';ctx.beginPath();ctx.arc(ART*.82,ART*.15,48,0,7);ctx.fill();
+    const petals=['#f2a9bd','#b7a4e0','#f7c59f','#9fc7e8','#f28fa5'];
+    for(let i=0;i<16;i++){
+      const x=rand(30,570),y=rand(ART*.6,ART*.94),r=rand(9,17),c=pick(petals);
+      ctx.strokeStyle='#6faf78';ctx.lineWidth=3;
+      ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x,y+30);ctx.stroke();
+      ctx.fillStyle=c;
+      for(let p=0;p<5;p++){const a=p/5*Math.PI*2;
+        ctx.beginPath();ctx.arc(x+Math.cos(a)*r,y+Math.sin(a)*r,r*.75,0,7);ctx.fill();}
+      ctx.fillStyle='#ffe28a';ctx.beginPath();ctx.arc(x,y,r*.6,0,7);ctx.fill();
+    }
+  }
+];
+
+/* ================= حالة اللعبة ================= */
+let N=3, imgURL='', pos=[], selected=-1, moves=0, seconds=0, timerId=null, started=false, won=false;
+const board=document.getElementById('board');
+const PAD=10;
+let GAP=6, boardSize=0, tileSize=0;
+let lastArtist=-1, customImage=false;
+function updateGap(){GAP = N>=12 ? 1 : N>=8 ? 2 : N>=6 ? 4 : 6;}
+function tileRadius(){return N>=12 ? '3px' : N>=8 ? '6px' : N>=6 ? '9px' : '12px';}
+
+function makeArt(){
+  const c=document.createElement('canvas');c.width=c.height=ART;
+  let i;do{i=Math.floor(Math.random()*artists.length)}while(i===lastArtist);
+  lastArtist=i;
+  artists[i](c.getContext('2d'));
+  return c.toDataURL('image/png');
+}
+
+function layout(){
+  updateGap();
+  boardSize=Math.min(window.innerWidth-40,430);
+  tileSize=(boardSize-PAD*2-GAP*(N-1))/N;
+  board.style.width=board.style.height=boardSize+'px';
+  document.querySelectorAll('.tile').forEach(t=>{
+    const idx=+t.dataset.idx;
+    styleTile(t,idx);
+    moveTile(t,pos.indexOf(idx));
+  });
+}
+window.addEventListener('resize',layout);
+
+function slotXY(slot){
+  const r=Math.floor(slot/N), c=slot%N;
+  return [PAD+c*(tileSize+GAP), PAD+r*(tileSize+GAP)];
+}
+function styleTile(t,idx){
+  const r=Math.floor(idx/N), c=idx%N;
+  t.style.width=t.style.height=tileSize+'px';
+  t.style.borderRadius=tileRadius();
+  t.style.backgroundImage=`url(${imgURL})`;
+  const inner=tileSize*N+GAP*(N-1); // نغطي المساحة الداخلية كاملة
+  t.style.backgroundSize=`${inner}px ${inner}px`;
+  t.style.backgroundPosition=`-${c*(tileSize+GAP)}px -${r*(tileSize+GAP)}px`;
+}
+function moveTile(t,slot){
+  const [x,y]=slotXY(slot);
+  t.style.transform=`translate(${x}px,${y}px)`;
+}
+
+function buildBoard(){
+  board.innerHTML='';
+  updateGap();
+  boardSize=Math.min(window.innerWidth-40,430);
+  tileSize=(boardSize-PAD*2-GAP*(N-1))/N;
+  board.style.width=board.style.height=boardSize+'px';
+  const total=N*N;
+  pos=[...Array(total).keys()];
+  // خلط مع ضمان عدم الحل الفوري
+  do{
+    for(let i=total-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pos[i],pos[j]]=[pos[j],pos[i]];}
+  }while(pos.every((v,i)=>v===i));
+  for(let idx=0;idx<total;idx++){
+    const t=document.createElement('div');
+    t.className='tile enter';t.dataset.idx=idx;
+    styleTile(t,idx);
+    moveTile(t,pos.indexOf(idx));
+    t.addEventListener('click',()=>onTileClick(idx));
+    t.draggable=true;
+    t.addEventListener('dragstart',e=>{selected=idx;t.classList.add('selected');e.dataTransfer.setData('text','');});
+    t.addEventListener('dragend',()=>{t.classList.remove('selected');});
+    t.addEventListener('dragover',e=>e.preventDefault());
+    t.addEventListener('drop',e=>{e.preventDefault();if(selected>=0&&selected!==idx){swap(selected,idx);}selected=-1;clearSel();});
+    board.appendChild(t);
+    setTimeout(()=>t.classList.remove('enter'),60+idx*Math.min(45,1200/total)); // دخول متتابع
+  }
+  updateProgress();
+}
+
+function clearSel(){document.querySelectorAll('.tile.selected').forEach(t=>t.classList.remove('selected'))}
+
+function onTileClick(idx){
+  if(won)return;
+  const t=tileEl(idx);
+  if(selected===-1){selected=idx;t.classList.add('selected');return;}
+  if(selected===idx){selected=-1;clearSel();return;}
+  swap(selected,idx);selected=-1;clearSel();
+}
+function tileEl(idx){return document.querySelector(`.tile[data-idx="${idx}"]`)}
+
+function swap(a,b){
+  if(!started){started=true;startTimer();}
+  const sa=pos.indexOf(a), sb=pos.indexOf(b);
+  [pos[sa],pos[sb]]=[pos[sb],pos[sa]];
+  moveTile(tileEl(a),sb);moveTile(tileEl(b),sa);
+  moves++;const mv=document.getElementById('moves');
+  mv.textContent=moves;mv.classList.remove('pulse');void mv.offsetWidth;mv.classList.add('pulse');
+  // وميض أخضر عند وضع القطعة بمكانها الصحيح
+  [[a,sb],[b,sa]].forEach(([idx,slot])=>{
+    if(idx===slot){const t=tileEl(idx);t.classList.add('correct-flash');setTimeout(()=>t.classList.remove('correct-flash'),700);}
+  });
+  updateProgress();
+  if(pos.every((v,i)=>v===i))win();
+}
+
+function updateProgress(){
+  const correct=pos.filter((v,i)=>v===i).length;
+  document.getElementById('progress').textContent=Math.round(correct/pos.length*100)+'%';
+}
+
+/* ================= المؤقت ================= */
+function startTimer(){
+  timerId=setInterval(()=>{seconds++;
+    document.getElementById('timer').textContent=
+      Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0');
+  },1000);
+}
+function resetStats(){
+  clearInterval(timerId);seconds=0;moves=0;started=false;won=false;selected=-1;
+  document.getElementById('moves').textContent='0';
+  document.getElementById('timer').textContent='0:00';
+}
+
+/* ================= الفوز والاحتفال ================= */
+const cvs=document.getElementById('confetti'),cx=cvs.getContext('2d');
+let particles=[],confettiRun=false;
+function win(){
+  won=true;clearInterval(timerId);
+  document.querySelectorAll('.tile').forEach(t=>t.classList.add('locked'));
+  document.getElementById('winStats').textContent=
+    `${moves} حركة خلال ${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')} دقيقة`;
+  setTimeout(()=>{document.getElementById('winOverlay').classList.add('show');fireConfetti();},550);
+}
+function fireConfetti(){
+  cvs.width=innerWidth;cvs.height=innerHeight;
+  const cols=['#b7a4e0','#f2b8c6','#a8d8cf','#f7d9a8','#9fc7e8'];
+  particles=Array.from({length:160},()=>({
+    x:rand(0,cvs.width),y:rand(-cvs.height*.6,0),
+    w:rand(6,12),h:rand(8,16),c:pick(cols),
+    vy:rand(2,5),vx:rand(-1.6,1.6),rot:rand(0,7),vr:rand(-.12,.12)
+  }));
+  if(!confettiRun){confettiRun=true;tick();}
+}
+function tick(){
+  cx.clearRect(0,0,cvs.width,cvs.height);
+  particles.forEach(p=>{
+    p.x+=p.vx;p.y+=p.vy;p.rot+=p.vr;
+    cx.save();cx.translate(p.x,p.y);cx.rotate(p.rot);
+    cx.fillStyle=p.c;cx.fillRect(-p.w/2,-p.h/2,p.w,p.h);cx.restore();
+  });
+  particles=particles.filter(p=>p.y<cvs.height+30);
+  if(particles.length)requestAnimationFrame(tick);
+  else{confettiRun=false;cx.clearRect(0,0,cvs.width,cvs.height);}
+}
+
+/* ================= بدء لعبة ================= */
+function setImage(url){
+  imgURL=url;
+  document.getElementById('preview').style.backgroundImage=`url(${imgURL})`;
+}
+function newGame(newImage){
+  document.getElementById('winOverlay').classList.remove('show');
+  resetStats();
+  if(!imgURL||(newImage&&!customImage))setImage(makeArt());
+  buildBoard();
+}
+
+/* رفع صورة من الجهاز — قصّ مربع من المنتصف بدقة عالية */
+document.getElementById('btnUpload').addEventListener('click',()=>document.getElementById('fileInput').click());
+document.getElementById('fileInput').addEventListener('change',e=>{
+  const file=e.target.files[0];if(!file)return;
+  const img=new Image();
+  img.onload=()=>{
+    const S=900, c=document.createElement('canvas');c.width=c.height=S;
+    const ctx=c.getContext('2d');
+    const side=Math.min(img.width,img.height);
+    ctx.drawImage(img,(img.width-side)/2,(img.height-side)/2,side,side,0,0,S,S);
+    customImage=true;
+    setImage(c.toDataURL('image/jpeg',.92));
+    resetStats();buildBoard();
+    URL.revokeObjectURL(img.src);
+  };
+  img.src=URL.createObjectURL(file);
+  e.target.value='';
+});
+
+document.getElementById('btnNew').addEventListener('click',()=>{customImage=false;newGame(true);});
+document.getElementById('btnAgain').addEventListener('click',()=>newGame(true));
+document.getElementById('btnShuffle').addEventListener('click',()=>{resetStats();buildBoard();});
+document.getElementById('diffSelect').addEventListener('change',function(){
+  N=+this.value;
+  newGame(false);
+});
+
+newGame(true);
+</script>
+</body>
+</html>
