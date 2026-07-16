@@ -567,17 +567,107 @@
   }
 
   let analyzeTimer = null;
-  function analyze() {
-    if (!state.sourceImage) return;
-    clearTimeout(analyzeTimer);
-    const delay = els.qualityMode.value === "max" ? 180 : 60;
-    if (els.analyzing) els.analyzing.hidden = false;
-    els.startBtn.disabled = true;
-    analyzeTimer = setTimeout(runAnalyze, delay);
+  let analyzeReqId = 0;
+  let colorWorker = null;
+
+  function getColorWorker() {
+    if (colorWorker) return colorWorker;
+    if (typeof Worker === "undefined") return null;
+    try {
+      colorWorker = new Worker("color-worker.js");
+      colorWorker.onmessage = (e) => {
+        const msg = e.data;
+        if (!msg) return;
+        if (msg.type === "progress") {
+          if (msg.id !== analyzeReqId) return;
+          if (els.analyzing) {
+            const labels = {
+              sample: "جارٍ أخذ العينات…",
+              quantize: "جارٍ تقليل الألوان…",
+              score: "جارٍ حساب الدقة…",
+            };
+            els.analyzing.hidden = false;
+            els.analyzing.textContent =
+              (labels[msg.phase] || "جارٍ التحويل بدقة…") +
+              (msg.pct != null ? " " + msg.pct + "%" : "");
+          }
+          return;
+        }
+        if (msg.type === "error") {
+          if (msg.id !== analyzeReqId) return;
+          toast("تعذّر التحويل — إعادة المحاولة محلياً");
+          runAnalyzeSync();
+          return;
+        }
+        if (msg.type === "done") {
+          if (msg.id !== analyzeReqId) return;
+          applyAnalyzeResult(msg.palette, msg.targets, msg.fidelity);
+        }
+      };
+      colorWorker.onerror = () => {
+        colorWorker = null;
+        toast("Worker غير متاح — التحويل على الواجهة");
+        runAnalyzeSync();
+      };
+      return colorWorker;
+    } catch (_) {
+      colorWorker = null;
+      return null;
+    }
   }
 
-  function runAnalyze() {
-    if (!state.sourceImage) return;
+  function applyAnalyzeResult(palette, targets, fidelity) {
+    const gw = state.gridW;
+    const gh = state.gridH;
+    state.palette = palette;
+    state.targets = targets;
+
+    const pw = els.previewPixel.width;
+    const ph = els.previewPixel.height;
+    pixCtx.fillStyle = "#fdf6f0";
+    pixCtx.fillRect(0, 0, pw, ph);
+    const cell = Math.min(pw / gw, ph / gh);
+    const ox = (pw - cell * gw) / 2;
+    const oy = (ph - cell * gh) / 2;
+    pixCtx.imageSmoothingEnabled = false;
+    for (let y = 0; y < gh; y++) {
+      for (let x = 0; x < gw; x++) {
+        const idx = state.targets[y * gw + x];
+        pixCtx.fillStyle = state.palette[idx].hex;
+        pixCtx.fillRect(
+          (ox + x * cell) | 0,
+          (oy + y * cell) | 0,
+          Math.ceil(cell),
+          Math.ceil(cell)
+        );
+      }
+    }
+
+    const total = gw * gh;
+    els.pixelMeta.textContent = gw + "×" + gh + " · " + state.palette.length + " لون";
+    els.estCells.textContent = gw + "×" + gh;
+    els.estColors.textContent = String(state.palette.length);
+    const mins = Math.max(1, Math.round(total / 40));
+    els.estTime.textContent = mins < 60 ? mins + " د" : Math.round(mins / 60) + " س";
+    if (els.fidelityValue) {
+      els.fidelityValue.textContent = fidelity + "%";
+      const ring = els.fidelityValue.closest(".fidelity-score");
+      if (ring) {
+        ring.style.borderColor =
+          fidelity >= 85 ? "var(--good)" : fidelity >= 70 ? "var(--accent)" : "var(--warm)";
+      }
+    }
+
+    els.startBtn.disabled = false;
+    els.previewRow.hidden = false;
+    if (els.analyzing) {
+      els.analyzing.hidden = true;
+      els.analyzing.textContent = "جارٍ التحويل بدقة…";
+    }
+  }
+
+  function prepareAnalyzeMeta() {
+    if (!state.sourceImage) return null;
     const maxSide = Number(els.gridSize.value);
     state.colorCount = Number(els.colorCount.value);
     state.useDither = els.dither.checked;
@@ -601,6 +691,74 @@
       "×" +
       (state.sourceImage.naturalHeight || state.sourceImage.height);
 
+    return { gw, gh };
+  }
+
+  function buildSampleImageData(gw, gh) {
+    const scaleMap = { draft: 2, balanced: 4, max: 6 };
+    const ss = scaleMap[state.quality] || 4;
+    const sw = gw * ss;
+    const sh = gh * ss;
+    const tmp = document.createElement("canvas");
+    tmp.width = sw;
+    tmp.height = sh;
+    const t = tmp.getContext("2d", { willReadFrequently: true });
+    drawFitted(t, state.sourceImage, sw, sh, state.fit);
+    return { imageData: t.getImageData(0, 0, sw, sh), sw, sh };
+  }
+
+  function analyze() {
+    if (!state.sourceImage) return;
+    clearTimeout(analyzeTimer);
+    const delay = els.qualityMode.value === "max" ? 180 : 60;
+    if (els.analyzing) {
+      els.analyzing.hidden = false;
+      els.analyzing.textContent = "جارٍ التحويل بدقة…";
+    }
+    els.startBtn.disabled = true;
+    analyzeTimer = setTimeout(runAnalyze, delay);
+  }
+
+  function runAnalyze() {
+    if (!state.sourceImage) return;
+    const dims = prepareAnalyzeMeta();
+    if (!dims) return;
+    const { gw, gh } = dims;
+    const id = ++analyzeReqId;
+    const worker = getColorWorker();
+
+    if (worker) {
+      try {
+        const { imageData, sw, sh } = buildSampleImageData(gw, gh);
+        worker.postMessage(
+          {
+            type: "analyze",
+            id,
+            buffer: imageData.data.buffer,
+            sw,
+            sh,
+            gw,
+            gh,
+            quality: state.quality,
+            keepEdges: state.keepEdges,
+            colorCount: state.colorCount,
+            dither: state.useDither,
+          },
+          [imageData.data.buffer]
+        );
+        return;
+      } catch (_) {
+        /* fall through to sync */
+      }
+    }
+    runAnalyzeSync();
+  }
+
+  function runAnalyzeSync() {
+    if (!state.sourceImage) return;
+    const dims = prepareAnalyzeMeta();
+    if (!dims) return;
+    const { gw, gh } = dims;
     const sampled = sampleGridHD(
       state.sourceImage,
       gw,
@@ -617,50 +775,8 @@
       gh,
       state.quality
     );
-    state.palette = result.palette;
-    state.targets = result.targets;
-
-    // Preview with correct aspect
-    const pw = els.previewPixel.width;
-    const ph = els.previewPixel.height;
-    pixCtx.fillStyle = "#fdf6f0";
-    pixCtx.fillRect(0, 0, pw, ph);
-    const cell = Math.min(pw / gw, ph / gh);
-    const ox = (pw - cell * gw) / 2;
-    const oy = (ph - cell * gh) / 2;
-    pixCtx.imageSmoothingEnabled = false;
-    for (let y = 0; y < gh; y++) {
-      for (let x = 0; x < gw; x++) {
-        const idx = state.targets[y * gw + x];
-        pixCtx.fillStyle = state.palette[idx].hex;
-        pixCtx.fillRect(
-          (ox + x * cell) | 0,
-          (oy + y * cell) | 0,
-          Math.ceil(cell),
-          Math.ceil(cell)
-        );
-      }
-    }
-
-    const total = gw * gh;
-    const fidelity = scoreFidelity(sampled.cells, state.targets, state.palette);
-    els.pixelMeta.textContent = gw + "×" + gh + " · " + state.palette.length + " لون";
-    els.estCells.textContent = gw + "×" + gh;
-    els.estColors.textContent = String(state.palette.length);
-    const mins = Math.max(1, Math.round(total / 40));
-    els.estTime.textContent = mins < 60 ? mins + " د" : Math.round(mins / 60) + " س";
-    if (els.fidelityValue) {
-      els.fidelityValue.textContent = fidelity + "%";
-      const ring = els.fidelityValue.closest(".fidelity-score");
-      if (ring) {
-        ring.style.borderColor =
-          fidelity >= 85 ? "var(--good)" : fidelity >= 70 ? "var(--accent)" : "var(--warm)";
-      }
-    }
-
-    els.startBtn.disabled = false;
-    els.previewRow.hidden = false;
-    if (els.analyzing) els.analyzing.hidden = true;
+    const fidelity = scoreFidelity(sampled.cells, result.targets, result.palette);
+    applyAnalyzeResult(result.palette, result.targets, fidelity);
   }
 
   function setImage(img, name) {

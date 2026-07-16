@@ -39,25 +39,34 @@ python -m http.server 8080
 index.html        ← الصفحة الرئيسية
 color.html        ← لعبة تلوين بالبكسل
 puzzle-game.html  ← لعبة بازل الصور
-game.js           ← منطق التلوين وتحويل الصور
+game.js           ← منطق التلوين والواجهة
+color-worker.js   ← تحويل الصور في الخلفية (Web Worker)
+play-data.js      ← إحصائيات · شارات · معرض
+tutorial.js       ← شرح اللعب
 style.css         ← التصميم الموحّد
 manifest.json     ← إعدادات PWA
 sw.js             ← Service Worker للتخزين المؤقت
+og-cover.png      ← صورة المشاركة الاجتماعية
 favicon.svg       ← أيقونة الموقع
 ```
 
 ## الميزات
 
 - واجهة عربية كاملة (RTL)
-- تحويل صور متقدم (CIE Lab، median-cut، dithering)
+- تحويل صور متقدم عبر **Web Worker** (بدون تجميد الواجهة)
 - حفظ واستئناف الجلسة
 - تصدير ومشاركة النتيجة
+- تحدي يومي · شارات · معرض أعمال
 - دعم PWA — يمكن تثبيته على الهاتف
 - يعمل بدون إنترنت بعد الزيارة الأولى
 
 ## التقنيات
 
-HTML · CSS · JavaScript (Vanilla) — بدون frameworks
+HTML · CSS · JavaScript (Vanilla) · Web Worker — بدون frameworks
+
+## المشاركة الاجتماعية
+
+الصور والروابط تستخدم Open Graph (`og-cover.png`) لتظهر معاينة جميلة على واتساب وتويتر.
 
 ---
 
