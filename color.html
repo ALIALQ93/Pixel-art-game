@@ -2,7 +2,9 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="theme-color" content="#f3ecfb" />
   <meta name="description" content="حوّل صورك إلى فن بكسل ولوّن كل بكسل حسب رقمه" />
   <title>تلوين بالبكسل — Pixel Atelier</title>
@@ -145,6 +147,7 @@
         </div>
 
         <div class="bar-end">
+          <button type="button" id="fullscreen-btn" class="icon-btn mobile-only" title="ملء الشاشة" aria-pressed="false">⛶</button>
           <button type="button" id="sound-btn" class="icon-btn" title="صوت" aria-pressed="true">♪</button>
           <button type="button" id="export-btn" class="btn compact">تصدير</button>
         </div>
@@ -209,17 +212,29 @@
           </div>
         </div>
 
-        <aside class="colors">
+        <aside class="colors" id="colors-panel">
           <div class="colors-head">
             <h2>الألوان</h2>
-            <label class="switch dense">
-              <input type="checkbox" id="auto-next" checked />
-              <span>تلقائي</span>
-            </label>
+            <div class="colors-head-end">
+              <label class="switch dense">
+                <input type="checkbox" id="auto-next" checked />
+                <span>تلقائي</span>
+              </label>
+              <button type="button" id="colors-close" class="colors-close mobile-only" title="إغلاق">✕</button>
+            </div>
           </div>
           <div class="palette" id="palette"></div>
         </aside>
       </div>
+
+      <div class="mobile-dock" id="mobile-dock" aria-label="أدوات سريعة">
+        <button type="button" class="mob-btn active" id="mob-brush" title="فرشاة">✎</button>
+        <button type="button" class="mob-btn" id="mob-fill" title="ملء">◫</button>
+        <button type="button" class="mob-btn" id="mob-undo" title="تراجع" disabled>↶</button>
+        <button type="button" class="mob-btn" id="mob-hint" title="معاينة" aria-pressed="false">◉</button>
+        <button type="button" class="mob-btn mob-accent" id="mob-colors" title="الألوان">🎨</button>
+      </div>
+      <div class="colors-backdrop" id="colors-backdrop" hidden></div>
     </section>
   </div>
 

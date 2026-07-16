@@ -51,7 +51,14 @@
     sessionTitle: $("session-title"),
     autoNext: $("auto-next"),
     soundBtn: $("sound-btn"),
+    colorsPanel: $("colors-panel"),
+    colorsBackdrop: $("colors-backdrop"),
+    fullscreenBtn: $("fullscreen-btn"),
   };
+
+  const isMobile = () =>
+    window.matchMedia("(max-width: 768px)").matches ||
+    (navigator.maxTouchPoints > 0 && window.innerWidth < 1024);
 
   const ctx = els.board.getContext("2d");
   const fx = els.fx.getContext("2d");
@@ -97,6 +104,8 @@
     completed: false,
     needsDraw: true,
     hoverCell: -1,
+    colorsDrawer: false,
+    stageFullscreen: false,
   };
 
   // ——— Audio (soft UI beeps) ———
@@ -789,6 +798,82 @@
   function syncHistoryButtons() {
     $("undo-btn").disabled = !state.undo.length;
     $("redo-btn").disabled = !state.redo.length;
+    const mobUndo = $("mob-undo");
+    if (mobUndo) mobUndo.disabled = !state.undo.length;
+  }
+
+  function syncMobileTools() {
+    const mobBrush = $("mob-brush");
+    const mobFill = $("mob-fill");
+    const mobHint = $("mob-hint");
+    if (mobBrush) mobBrush.classList.toggle("active", state.tool === "brush");
+    if (mobFill) mobFill.classList.toggle("active", state.tool === "fill");
+    if (mobHint) mobHint.setAttribute("aria-pressed", String(state.showHint));
+  }
+
+  function setColorsDrawer(open) {
+    state.colorsDrawer = open;
+    if (els.colorsPanel) els.colorsPanel.classList.toggle("drawer-open", open);
+    if (els.colorsBackdrop) els.colorsBackdrop.hidden = !open;
+  }
+
+  function toggleColorsDrawer() {
+    setColorsDrawer(!state.colorsDrawer);
+  }
+
+  function applyMobileSetupDefaults() {
+    if (!isMobile()) return;
+    els.gridSize.value = "24";
+    els.colorCount.value = "12";
+    if (els.qualityMode) els.qualityMode.value = "balanced";
+    document.querySelectorAll("#difficulty-presets .chip").forEach((chip) => {
+      chip.classList.toggle(
+        "active",
+        chip.dataset.grid === "24" && chip.dataset.colors === "12"
+      );
+    });
+    els.gridLabel.textContent = "24";
+    els.colorLabel.textContent = "12";
+  }
+
+  function autoZoomForMobile(notify) {
+    if (!isMobile()) return;
+    state.cam.zoom = 1;
+    state.cam.x = 0;
+    state.cam.y = 0;
+    resizeBoard();
+    const m = boardMetrics();
+    const maxSide = Math.max(state.gridW, state.gridH);
+    const minCell = Math.max(11, Math.min(16, 300 / maxSide));
+    if (m.cell < minCell) {
+      setZoom(Math.min(5, minCell / m.cell));
+    } else if (maxSide > 36) {
+      setZoom(Math.min(2.2, 1.5));
+    }
+    if (notify) toast("تم ضبط التكبير للهاتف");
+  }
+
+  function toggleStageFullscreen() {
+    state.stageFullscreen = !state.stageFullscreen;
+    document.body.classList.toggle("in-workspace-fullscreen", state.stageFullscreen);
+    if (els.fullscreenBtn) {
+      els.fullscreenBtn.setAttribute("aria-pressed", String(state.stageFullscreen));
+      els.fullscreenBtn.textContent = state.stageFullscreen ? "⊟" : "⛶";
+      els.fullscreenBtn.title = state.stageFullscreen ? "خروج من ملء الشاشة" : "ملء الشاشة";
+    }
+    resizeBoard();
+    state.needsDraw = true;
+    if (state.stageFullscreen) autoZoomForMobile(false);
+  }
+
+  function setWorkspaceMode(on) {
+    document.body.classList.toggle("in-workspace", on);
+    if (!on) {
+      document.body.classList.remove("in-workspace-fullscreen");
+      state.stageFullscreen = false;
+      setColorsDrawer(false);
+      if (els.fullscreenBtn) els.fullscreenBtn.setAttribute("aria-pressed", "false");
+    }
   }
 
   function saveSession() {
@@ -1063,6 +1148,7 @@
         state.selectedColor = i;
         renderPalette();
         state.needsDraw = true;
+        if (isMobile()) setColorsDrawer(false);
       });
       els.palette.appendChild(btn);
     });
@@ -1333,12 +1419,18 @@
     updateProgress();
     startTimer(elapsedOffset || 0);
     resizeBoard();
+    setWorkspaceMode(true);
+    if (isMobile()) {
+      autoZoomForMobile(true);
+      setTool("brush");
+    }
     state.needsDraw = true;
     saveSession();
   }
 
   function leaveWorkspace() {
     clearInterval(state.timerId);
+    setWorkspaceMode(false);
     els.workspace.hidden = true;
     els.setup.hidden = false;
     els.resumeBtn.hidden = !hasSaved();
@@ -1352,6 +1444,7 @@
       if (btn) btn.classList.toggle("active", t === tool);
     });
     els.board.style.cursor = tool === "pan" || state.spaceHeld ? "grab" : "crosshair";
+    syncMobileTools();
   }
 
   function syncToggles() {
@@ -1508,6 +1601,7 @@
   $("hint-btn").addEventListener("click", () => {
     state.showHint = !state.showHint;
     syncToggles();
+    syncMobileTools();
     state.needsDraw = true;
   });
   $("grid-btn").addEventListener("click", () => {
@@ -1523,6 +1617,27 @@
     state.soundOn = !state.soundOn;
     syncToggles();
   });
+
+  const mobBrush = $("mob-brush");
+  const mobFill = $("mob-fill");
+  const mobUndo = $("mob-undo");
+  const mobHint = $("mob-hint");
+  const mobColors = $("mob-colors");
+  if (mobBrush) mobBrush.addEventListener("click", () => { setTool("brush"); setColorsDrawer(false); });
+  if (mobFill) mobFill.addEventListener("click", () => { setTool("fill"); setColorsDrawer(false); });
+  if (mobUndo) mobUndo.addEventListener("click", undo);
+  if (mobHint) {
+    mobHint.addEventListener("click", () => {
+      state.showHint = !state.showHint;
+      syncToggles();
+      syncMobileTools();
+      state.needsDraw = true;
+    });
+  }
+  if (mobColors) mobColors.addEventListener("click", toggleColorsDrawer);
+  if ($("colors-close")) $("colors-close").addEventListener("click", () => setColorsDrawer(false));
+  if (els.colorsBackdrop) els.colorsBackdrop.addEventListener("click", () => setColorsDrawer(false));
+  if (els.fullscreenBtn) els.fullscreenBtn.addEventListener("click", toggleStageFullscreen);
 
   $("reset-btn").addEventListener("click", () => {
     if (!confirm("مسح كل التلوين في هذه الجلسة؟")) return;
@@ -1755,6 +1870,17 @@
     }
   });
 
+  // منع التمرير أثناء الرسم على الهاتف
+  document.addEventListener(
+    "touchmove",
+    (e) => {
+      if (document.body.classList.contains("in-workspace") && state.painting) {
+        e.preventDefault();
+      }
+    },
+    { passive: false }
+  );
+
   // autosave periodically
   setInterval(() => {
     if (!els.workspace.hidden) saveSession();
@@ -1762,6 +1888,7 @@
 
   // init
   buildGallery();
+  applyMobileSetupDefaults();
   els.resumeBtn.hidden = !hasSaved();
   syncLabels();
   loop();

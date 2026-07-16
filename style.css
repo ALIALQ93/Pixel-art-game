@@ -1099,3 +1099,228 @@ body {
     bottom: 8px;
   }
 }
+
+/* ——— Mobile play mode ——— */
+.mobile-only {
+  display: none;
+}
+
+body.in-workspace {
+  overflow: hidden;
+}
+
+body.in-workspace .site-nav {
+  display: none;
+}
+
+body.in-workspace .app {
+  width: 100%;
+  padding: 0;
+  max-width: none;
+}
+
+body.in-workspace-fullscreen {
+  overflow: hidden;
+}
+
+body.in-workspace-fullscreen .blob {
+  display: none;
+}
+
+.colors-head-end {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.colors-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.mobile-dock,
+.colors-backdrop {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-only {
+    display: grid;
+    place-items: center;
+  }
+
+  .mobile-dock {
+    display: flex;
+    position: fixed;
+    z-index: 30;
+    left: 50%;
+    bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    transform: translateX(-50%);
+    gap: 6px;
+    padding: 8px 10px;
+    background: var(--card);
+    backdrop-filter: blur(10px);
+    border: 1px solid #fff;
+    border-radius: 999px;
+    box-shadow: 0 12px 36px rgba(120, 100, 160, 0.28);
+  }
+
+  .mob-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: #fff;
+    color: var(--ink);
+    font-size: 1.05rem;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .mob-btn.active,
+  .mob-btn[aria-pressed="true"] {
+    border-color: var(--accent);
+    color: #8a76c4;
+    background: var(--accent-dim);
+  }
+
+  .mob-btn.mob-accent {
+    background: linear-gradient(135deg, var(--accent), #9d86d4);
+    color: #fff;
+    border-color: transparent;
+  }
+
+  .mob-btn:disabled {
+    opacity: 0.35;
+  }
+
+  body.in-workspace .workspace {
+    min-height: 100dvh;
+    min-height: 100vh;
+    gap: 0;
+    padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) 0
+      env(safe-area-inset-left, 0px);
+  }
+
+  body.in-workspace .bar {
+    border-radius: 0;
+    top: 0;
+    padding: 6px 8px;
+  }
+
+  body.in-workspace .bar-title strong {
+    font-size: 0.82rem;
+  }
+
+  body.in-workspace .bar-end .btn.compact {
+    display: none;
+  }
+
+  body.in-workspace .studio {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr;
+    min-height: 0;
+    height: calc(100dvh - 56px);
+    height: calc(100vh - 56px);
+  }
+
+  body.in-workspace .rail {
+    display: none;
+  }
+
+  body.in-workspace .colors {
+    position: fixed;
+    z-index: 40;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    max-height: min(62vh, 420px);
+    border-radius: 18px 18px 0 0;
+    transform: translateY(110%);
+    transition: transform 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+    box-shadow: 0 -12px 40px rgba(120, 100, 160, 0.22);
+  }
+
+  body.in-workspace .colors.drawer-open {
+    transform: translateY(0);
+  }
+
+  body.in-workspace .colors-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 35;
+    background: rgba(91, 84, 104, 0.25);
+    backdrop-filter: blur(2px);
+  }
+
+  body.in-workspace .colors-backdrop[hidden] {
+    display: none;
+  }
+
+  body.in-workspace .stage {
+    min-height: 0;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+
+  body.in-workspace .view-controls {
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+    width: min(220px, calc(100% - 20px));
+    padding: 6px;
+  }
+
+  body.in-workspace .vc-pad {
+    display: none;
+  }
+
+  body.in-workspace .palette {
+    grid-template-columns: 1fr;
+    max-height: calc(min(62vh, 420px) - 56px);
+  }
+
+  body.in-workspace-fullscreen .workspace {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    background: linear-gradient(160deg, var(--bg1) 0%, var(--bg2) 55%, var(--bg3) 100%);
+  }
+
+  body.in-workspace-fullscreen .studio {
+    height: calc(100dvh - 52px);
+    height: calc(100vh - 52px);
+  }
+
+  body.in-workspace-fullscreen .bar {
+    padding-top: calc(6px + env(safe-area-inset-top, 0px));
+  }
+
+  /* إعداد — إعدادات مبسّطة */
+  .setup-layout {
+    gap: 10px;
+  }
+
+  .hero h1 {
+    font-size: 1.55rem;
+  }
+
+  .compare {
+    grid-template-columns: 1fr;
+  }
+
+  .fidelity {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  .fidelity-score {
+    margin: 0 auto;
+  }
+}

@@ -2,7 +2,8 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#f3ecfb">
 <meta name="description" content="لعبة بازل صور — اجمع القطع حتى تكتمل الصورة">
 <title>بازل الصور — لعبة تجميع</title>
@@ -22,7 +23,8 @@
     font-family:'Tajawal',sans-serif;color:var(--ink);
     min-height:100vh;display:flex;flex-direction:column;align-items:center;
     background:linear-gradient(160deg,var(--bg1) 0%,var(--bg2) 55%,var(--bg3) 100%);
-    overflow-x:hidden; padding:20px 14px 40px;
+    overflow-x:hidden; padding:20px 14px calc(40px + env(safe-area-inset-bottom, 0px));
+    padding-top:calc(20px + env(safe-area-inset-top, 0px));
   }
   /* فقاعات خلفية عائمة */
   .blob{position:fixed;border-radius:50%;filter:blur(60px);opacity:.45;z-index:0;pointer-events:none;animation:float 14s ease-in-out infinite}
@@ -67,6 +69,7 @@
     box-shadow:0 3px 10px rgba(120,100,160,.18);
     transition:transform .45s cubic-bezier(.25,.9,.3,1.15), box-shadow .25s, filter .25s, opacity .4s;
     will-change:transform;
+    touch-action:manipulation;
   }
   .tile:hover{filter:brightness(1.07);box-shadow:0 8px 22px rgba(120,100,160,.3);z-index:3}
   .tile.selected{
@@ -304,7 +307,7 @@ function makeArt(){
 
 function layout(){
   updateGap();
-  boardSize=Math.min(window.innerWidth-40,430);
+  boardSize=Math.min(window.innerWidth-28,window.innerHeight*0.52,480);
   tileSize=(boardSize-PAD*2-GAP*(N-1))/N;
   board.style.width=board.style.height=boardSize+'px';
   document.querySelectorAll('.tile').forEach(t=>{
@@ -336,7 +339,7 @@ function moveTile(t,slot){
 function buildBoard(){
   board.innerHTML='';
   updateGap();
-  boardSize=Math.min(window.innerWidth-40,430);
+  boardSize=Math.min(window.innerWidth-28,window.innerHeight*0.52,480);
   tileSize=(boardSize-PAD*2-GAP*(N-1))/N;
   board.style.width=board.style.height=boardSize+'px';
   const total=N*N;
