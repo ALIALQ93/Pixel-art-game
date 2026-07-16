@@ -142,6 +142,12 @@
   .site-nav a.active{
     background:linear-gradient(135deg,var(--accent),#9d86d4);color:#fff;border-color:transparent;
   }
+  .help-link-puzzle{
+    margin-top:8px;font:inherit;font-size:.85rem;font-weight:700;color:var(--ink-soft);
+    background:var(--card);border:1px solid #fff;border-radius:999px;padding:6px 14px;
+    cursor:pointer;box-shadow:var(--shadow);
+  }
+  .help-link-puzzle:hover{transform:translateY(-1px)}
 </style>
 </head>
 <body>
@@ -156,6 +162,7 @@
 <header>
   <h1>🧩 بازل الصور</h1>
   <div class="sub">اضغط قطعتين لتبديلهما — أو اسحب قطعة فوق أخرى — حتى تكتمل الصورة</div>
+  <button type="button" class="help-link-puzzle" id="help-btn">❓ كيف تلعب؟</button>
 </header>
 
 <div class="hud">
@@ -383,9 +390,9 @@ function swap(a,b){
   moveTile(tileEl(a),sb);moveTile(tileEl(b),sa);
   moves++;const mv=document.getElementById('moves');
   mv.textContent=moves;mv.classList.remove('pulse');void mv.offsetWidth;mv.classList.add('pulse');
-  // وميض أخضر عند وضع القطعة بمكانها الصحيح
   [[a,sb],[b,sa]].forEach(([idx,slot])=>{
-    if(idx===slot){const t=tileEl(idx);t.classList.add('correct-flash');setTimeout(()=>t.classList.remove('correct-flash'),700);}
+    if(idx===slot){const t=tileEl(idx);t.classList.add('correct-flash');setTimeout(()=>t.classList.remove('correct-flash'),700);
+      if(navigator.vibrate)try{navigator.vibrate(10);}catch(_){}}
   });
   updateProgress();
   if(pos.every((v,i)=>v===i))win();
@@ -417,6 +424,17 @@ function win(){
   document.querySelectorAll('.tile').forEach(t=>t.classList.add('locked'));
   document.getElementById('winStats').textContent=
     `${moves} حركة خلال ${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')} دقيقة`;
+  if(window.PlayData){
+    const before=new Set(PlayData.getUnlockedAchievements());
+    PlayData.recordPuzzleComplete({timeSec:seconds,moves,gridN:N});
+    PlayData.getUnlockedAchievements().forEach(id=>{
+      if(!before.has(id)){
+        const ach=PlayData.getAchievementsList().find(a=>a.id===id);
+        if(ach)setTimeout(()=>alert('🏅 شارة جديدة: '+ach.name),800);
+      }
+    });
+  }
+  if(navigator.vibrate)try{navigator.vibrate([12,35,12,35,20]);}catch(_){}
   setTimeout(()=>{document.getElementById('winOverlay').classList.add('show');fireConfetti();},550);
 }
 function fireConfetti(){
@@ -508,6 +526,12 @@ document.getElementById('diffSelect').addEventListener('change',function(){
 });
 
 newGame(true);
+</script>
+<script src="play-data.js"></script>
+<script src="tutorial.js"></script>
+<script>
+document.getElementById('help-btn').addEventListener('click',()=>Tutorial.buildOverlay('puzzle'));
+if(window.Tutorial)Tutorial.maybeShow('puzzle');
 </script>
 <script src="pwa-register.js"></script>
 </body>

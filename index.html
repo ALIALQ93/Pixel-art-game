@@ -25,6 +25,19 @@
       <p class="lead">لعبتان ممتعتان لتمضية الوقت — حوّل صورك إلى فن بكسل أو اجمع قطع البازل.</p>
     </header>
 
+    <div class="home-stats" id="home-stats" aria-label="إحصائيات"></div>
+
+    <a href="color.html?daily=1" class="daily-card" id="daily-card">
+      <div class="daily-card-inner">
+        <span class="daily-emoji">☀️</span>
+        <div>
+          <strong>تحدي اليوم</strong>
+          <p>لوحة بكسل جديدة كل يوم — هل تنجزها؟</p>
+        </div>
+        <span class="daily-status">متاح الآن</span>
+      </div>
+    </a>
+
     <div class="game-cards">
       <a href="color.html" class="game-card">
         <div class="game-card-icon" aria-hidden="true">
@@ -45,6 +58,16 @@
       </a>
     </div>
 
+    <section class="home-section">
+      <h2 class="section-title">🏅 الشارات</h2>
+      <div class="badge-row" id="home-achievements"></div>
+    </section>
+
+    <section class="home-section">
+      <h2 class="section-title">🖼️ أعمالي</h2>
+      <div class="gallery-grid" id="home-gallery"></div>
+    </section>
+
     <footer class="landing-footer">صنعت بحب لتمضية الوقت ✨</footer>
   </main>
 
@@ -58,7 +81,6 @@
           px.fillRect(x * 8, y * 8, 8, 8);
         }
       }
-
       const pz = document.getElementById("card-puzzle").getContext("2d");
       const g = pz.createLinearGradient(0, 0, 80, 80);
       g.addColorStop(0, "#cfe8f7");
@@ -78,6 +100,8 @@
       }
     })();
   </script>
+  <script src="play-data.js"></script>
+  <script src="home.js"></script>
   <script src="pwa-register.js"></script>
 </body>
 </html>

@@ -106,7 +106,18 @@
     hoverCell: -1,
     colorsDrawer: false,
     stageFullscreen: false,
+    smartHint: true,
+    isDaily: false,
+    hintCell: -1,
   };
+
+  function haptic(pattern) {
+    if (navigator.vibrate) {
+      try {
+        navigator.vibrate(pattern);
+      } catch (_) {}
+    }
+  }
 
   // ——— Audio (soft UI beeps) ———
   let audioCtx = null;
@@ -120,6 +131,7 @@
       g.connect(audioCtx.destination);
       const now = audioCtx.currentTime;
       if (kind === "paint") {
+        haptic(8);
         o.frequency.value = 620;
         g.gain.setValueAtTime(0.04, now);
         g.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
@@ -127,6 +139,7 @@
         o.start(now);
         o.stop(now + 0.07);
       } else if (kind === "wrong") {
+        haptic([25, 40, 25]);
         o.frequency.value = 160;
         g.gain.setValueAtTime(0.05, now);
         g.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
@@ -134,6 +147,7 @@
         o.start(now);
         o.stop(now + 0.13);
       } else if (kind === "done") {
+        haptic([12, 35, 12, 35, 20]);
         [523, 659, 784].forEach((f, i) => {
           const o2 = audioCtx.createOscillator();
           const g2 = audioCtx.createGain();
@@ -148,6 +162,7 @@
           o2.stop(t + 0.26);
         });
       } else if (kind === "complete-color") {
+        haptic(14);
         o.frequency.value = 880;
         g.gain.setValueAtTime(0.04, now);
         g.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
@@ -726,6 +741,57 @@
       x.fillStyle = "#f5d070"; x.beginPath(); x.arc(80, 95, 28, 0, Math.PI * 2); x.fill();
       x.fillStyle = "#1a2433";
       x.beginPath(); x.moveTo(0, 160); x.lineTo(0, 120); x.lineTo(40, 95); x.lineTo(70, 125); x.lineTo(110, 90); x.lineTo(160, 118); x.lineTo(160, 160); x.fill();
+    } else if (kind === "butterfly") {
+      x.fillStyle = "#e8f4f2"; x.fillRect(0, 0, 160, 160);
+      x.fillStyle = "#b7a4e0";
+      x.beginPath(); x.ellipse(55, 80, 38, 48, -0.3, 0, Math.PI * 2); x.fill();
+      x.beginPath(); x.ellipse(105, 80, 38, 48, 0.3, 0, Math.PI * 2); x.fill();
+      x.fillStyle = "#f2b8c6";
+      x.beginPath(); x.ellipse(48, 85, 22, 30, -0.3, 0, Math.PI * 2); x.fill();
+      x.beginPath(); x.ellipse(112, 85, 22, 30, 0.3, 0, Math.PI * 2); x.fill();
+      x.fillStyle = "#5b5468"; x.fillRect(76, 55, 8, 70);
+      x.fillStyle = "#1a1a1a";
+      x.beginPath(); x.arc(80, 52, 5, 0, Math.PI * 2); x.fill();
+    } else if (kind === "flower") {
+      x.fillStyle = "#fdf6f0"; x.fillRect(0, 0, 160, 160);
+      const petals = ["#f2b8c6", "#b7a4e0", "#f7d9a8", "#a8d8cf", "#9fc7e8"];
+      for (let p = 0; p < 6; p++) {
+        const a = (p / 6) * Math.PI * 2;
+        x.fillStyle = petals[p % petals.length];
+        x.beginPath(); x.arc(80 + Math.cos(a) * 28, 80 + Math.sin(a) * 28, 18, 0, Math.PI * 2); x.fill();
+      }
+      x.fillStyle = "#f7d9a8"; x.beginPath(); x.arc(80, 80, 16, 0, Math.PI * 2); x.fill();
+      x.strokeStyle = "#6faf78"; x.lineWidth = 4;
+      x.beginPath(); x.moveTo(80, 96); x.lineTo(80, 145); x.stroke();
+    } else if (kind === "fish") {
+      const g = x.createLinearGradient(0, 0, 0, 160);
+      g.addColorStop(0, "#9fc7e8"); g.addColorStop(1, "#cfe8f7");
+      x.fillStyle = g; x.fillRect(0, 0, 160, 160);
+      x.fillStyle = "#f7c59f";
+      x.beginPath(); x.ellipse(85, 82, 42, 28, 0, 0, Math.PI * 2); x.fill();
+      x.beginPath(); x.moveTo(38, 82); x.lineTo(18, 62); x.lineTo(18, 102); x.fill();
+      x.fillStyle = "#fff"; x.beginPath(); x.arc(108, 76, 8, 0, Math.PI * 2); x.fill();
+      x.fillStyle = "#1a1a1a"; x.beginPath(); x.arc(110, 76, 4, 0, Math.PI * 2); x.fill();
+    } else if (kind === "heart") {
+      x.fillStyle = "#f3ecfb"; x.fillRect(0, 0, 160, 160);
+      x.fillStyle = "#e79aae";
+      x.beginPath();
+      x.moveTo(80, 120);
+      x.bezierCurveTo(30, 90, 30, 45, 80, 58);
+      x.bezierCurveTo(130, 45, 130, 90, 80, 120);
+      x.fill();
+    } else if (kind === "star") {
+      x.fillStyle = "#1b2a4a"; x.fillRect(0, 0, 160, 160);
+      x.fillStyle = "#f7d9a8";
+      x.beginPath();
+      for (let i = 0; i < 5; i++) {
+        const a = (i / 5) * Math.PI * 2 - Math.PI / 2;
+        const b = a + Math.PI / 5;
+        const method = i === 0 ? "moveTo" : "lineTo";
+        x[method](80 + Math.cos(a) * 50, 80 + Math.sin(a) * 50);
+        x.lineTo(80 + Math.cos(b) * 22, 80 + Math.sin(b) * 22);
+      }
+      x.closePath(); x.fill();
     } else {
       // geometric
       x.fillStyle = "#14202b"; x.fillRect(0, 0, 160, 160);
@@ -742,11 +808,28 @@
     return c;
   }
 
+  const DEMO_NAMES = {
+    cabin: "كوخ",
+    cat: "قطة",
+    sunset: "غروب",
+    geo: "أشكال",
+    butterfly: "فراشة",
+    flower: "زهرة",
+    fish: "سمكة",
+    heart: "قلب",
+    star: "نجمة",
+  };
+
   function buildGallery() {
     const demos = [
       { id: "cabin", name: "كوخ" },
       { id: "cat", name: "قطة" },
+      { id: "butterfly", name: "فراشة" },
+      { id: "flower", name: "زهرة" },
+      { id: "fish", name: "سمكة" },
       { id: "sunset", name: "غروب" },
+      { id: "heart", name: "قلب" },
+      { id: "star", name: "نجمة" },
       { id: "geo", name: "أشكال" },
     ];
     els.demoGallery.innerHTML = "";
@@ -772,6 +855,54 @@
       });
       els.demoGallery.appendChild(btn);
     });
+  }
+
+  function loadDemoById(id, label) {
+    const c = makeDemo(id);
+    const img = new Image();
+    img.onload = () => setImage(img, label || DEMO_NAMES[id] || id);
+    img.src = c.toDataURL("image/png");
+  }
+
+  function loadDailyChallenge() {
+    if (!window.PlayData) return;
+    state.isDaily = true;
+    const id = PlayData.getDailyDemoId();
+    els.gridSize.value = "32";
+    els.colorCount.value = "16";
+    if (els.qualityMode) els.qualityMode.value = "balanced";
+    const banner = $("daily-banner");
+    if (banner) banner.hidden = false;
+    loadDemoById(id, "تحدي اليوم — " + (DEMO_NAMES[id] || id));
+    toast("☀️ تحدي اليوم جاهز!");
+  }
+
+  function findNextHintCell() {
+    const color = state.selectedColor;
+    for (let i = 0; i < state.targets.length; i++) {
+      if (!state.painted[i] && state.targets[i] === color) return i;
+    }
+    return -1;
+  }
+
+  function focusHintCell() {
+    const cell = findNextHintCell();
+    if (cell < 0) {
+      toast("لا توجد بكسلات متبقية لهذا اللون");
+      return;
+    }
+    state.hintCell = cell;
+    resizeBoard();
+    const m = boardMetrics();
+    const cx = cell % state.gridW;
+    const cy = (cell / state.gridW) | 0;
+    const cellCx = m.ox + (cx + 0.5) * m.cell;
+    const cellCy = m.oy + (cy + 0.5) * m.cell;
+    state.cam.x = m.viewW / 2 - cellCx;
+    state.cam.y = m.viewH / 2 - cellCy;
+    clampCamera();
+    if (m.cell < 14) setZoom(Math.min(4, state.cam.zoom * 1.25));
+    state.needsDraw = true;
   }
 
   // ——— Session / persist ———
@@ -809,6 +940,10 @@
     if (mobBrush) mobBrush.classList.toggle("active", state.tool === "brush");
     if (mobFill) mobFill.classList.toggle("active", state.tool === "fill");
     if (mobHint) mobHint.setAttribute("aria-pressed", String(state.showHint));
+    const mobNext = $("mob-next");
+    if (mobNext) mobNext.setAttribute("aria-pressed", String(state.smartHint));
+    const nextBtn = $("next-hint-btn");
+    if (nextBtn) nextBtn.setAttribute("aria-pressed", String(state.smartHint));
   }
 
   function setColorsDrawer(open) {
@@ -1035,6 +1170,7 @@
         state.selectedColor = idx;
         renderPalette();
         state.needsDraw = true;
+        if (state.smartHint) setTimeout(focusHintCell, 80);
         return;
       }
     }
@@ -1094,13 +1230,37 @@
     state.completed = true;
     beep("done");
     spawnBurst(60);
-    const elapsed = formatTime(Date.now() - state.startedAt);
+    const elapsedMs = Date.now() - state.startedAt;
+    const elapsed = formatTime(elapsedMs);
     const accuracy = Math.max(
       0,
       Math.round((1 - state.mistimed / Math.max(1, state.targets.length + state.mistimed)) * 100)
     );
     els.doneStats.textContent =
       "الوقت " + elapsed + " · الدقة " + accuracy + "% · أخطاء " + state.mistimed;
+
+    if (window.PlayData) {
+      const before = new Set(PlayData.getUnlockedAchievements());
+      const canvas = renderExportCanvas();
+      const thumb = canvas.toDataURL("image/jpeg", 0.72);
+      PlayData.recordColorComplete({
+        name: state.sourceName,
+        timeMs: elapsedMs,
+        accuracy,
+        mistakes: state.mistimed,
+        gridW: state.gridW,
+        gridH: state.gridH,
+        thumb,
+        daily: state.isDaily,
+      });
+      PlayData.getUnlockedAchievements().forEach((id) => {
+        if (!before.has(id)) {
+          const ach = PlayData.getAchievementsList().find((a) => a.id === id);
+          if (ach) setTimeout(() => toast("🏅 شارة جديدة: " + ach.name), 600);
+        }
+      });
+    }
+
     els.doneBanner.hidden = false;
     try {
       localStorage.removeItem(STORAGE_KEY);
@@ -1348,6 +1508,23 @@
       ctx.strokeRect(m.ox + hx * m.cell + 1, m.oy + hy * m.cell + 1, m.cell - 2, m.cell - 2);
     }
 
+    if (state.smartHint && !state.completed) {
+      state.hintCell = findNextHintCell();
+      if (state.hintCell >= 0) {
+        const hx = state.hintCell % m.gw;
+        const hy = (state.hintCell / m.gw) | 0;
+        const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 180);
+        ctx.strokeStyle = "rgba(247, 180, 90, " + (0.5 + pulse * 0.5) + ")";
+        ctx.lineWidth = Math.max(2.5, m.cell * (0.12 + pulse * 0.08));
+        ctx.strokeRect(
+          m.ox + hx * m.cell + 0.5,
+          m.oy + hy * m.cell + 0.5,
+          m.cell - 1,
+          m.cell - 1
+        );
+      }
+    }
+
     state.needsDraw = false;
   }
 
@@ -1371,8 +1548,9 @@
   }
 
   function loop() {
-    if (!els.workspace.hidden && (state.needsDraw || state.particles.length)) {
-      if (state.needsDraw) drawBoard();
+    const animHint = state.smartHint && !els.workspace.hidden && !state.completed;
+    if (!els.workspace.hidden && (state.needsDraw || state.particles.length || animHint)) {
+      if (state.needsDraw || animHint) drawBoard();
       drawFx();
     }
     requestAnimationFrame(loop);
@@ -1450,6 +1628,7 @@
   function syncToggles() {
     $("focus-btn").setAttribute("aria-pressed", String(state.focusMode));
     $("hint-btn").setAttribute("aria-pressed", String(state.showHint));
+    $("next-hint-btn")?.setAttribute("aria-pressed", String(state.smartHint));
     $("grid-btn").setAttribute("aria-pressed", String(state.showGrid));
     $("ref-btn").setAttribute("aria-pressed", String(state.showRef));
     els.refImage.hidden = !state.showRef;
@@ -1604,6 +1783,13 @@
     syncMobileTools();
     state.needsDraw = true;
   });
+  $("next-hint-btn")?.addEventListener("click", () => {
+    state.smartHint = !state.smartHint;
+    syncToggles();
+    syncMobileTools();
+    if (state.smartHint) focusHintCell();
+    state.needsDraw = true;
+  });
   $("grid-btn").addEventListener("click", () => {
     state.showGrid = !state.showGrid;
     syncToggles();
@@ -1631,6 +1817,17 @@
       state.showHint = !state.showHint;
       syncToggles();
       syncMobileTools();
+      state.needsDraw = true;
+    });
+  }
+  const mobNext = $("mob-next");
+  if (mobNext) {
+    mobNext.addEventListener("click", () => {
+      state.smartHint = !state.smartHint;
+      syncToggles();
+      syncMobileTools();
+      if (state.smartHint) focusHintCell();
+      setColorsDrawer(false);
       state.needsDraw = true;
     });
   }
@@ -1891,5 +2088,19 @@
   applyMobileSetupDefaults();
   els.resumeBtn.hidden = !hasSaved();
   syncLabels();
+  syncMobileTools();
+  syncToggles();
+
+  if ($("help-btn") && window.Tutorial) {
+    $("help-btn").addEventListener("click", () => Tutorial.buildOverlay("color"));
+  }
+
+  const params = new URLSearchParams(location.search);
+  if (params.get("daily")) {
+    loadDailyChallenge();
+  } else if (window.Tutorial) {
+    Tutorial.maybeShow("color");
+  }
+
   loop();
 })();

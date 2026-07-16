@@ -33,7 +33,13 @@
         <p class="eyebrow">Pixel Atelier</p>
         <h1>تلوين بالبكسل</h1>
         <p class="lead">حمّل صورة، حوّلها إلى شبكة دقيقة، ولوّن كل بكسل حسب رقمه.</p>
+        <button type="button" class="btn ghost help-link" id="help-btn">❓ كيف تلعب؟</button>
       </header>
+
+      <div class="daily-banner" id="daily-banner" hidden>
+        <span>☀️</span>
+        <div><strong>تحدي اليوم</strong><small>لوحة خاصة بتاريخ اليوم</small></div>
+      </div>
 
       <div class="setup-layout">
         <div class="col-main">
@@ -164,7 +170,8 @@
           <div class="rail-block">
             <span>عرض</span>
             <button type="button" class="tool" id="focus-btn" title="تركيز اللون" aria-pressed="false">◎</button>
-            <button type="button" class="tool" id="hint-btn" title="معاينة" aria-pressed="false">◉</button>
+            <button type="button" class="tool" id="hint-btn" title="معاينة الألوان" aria-pressed="false">◉</button>
+            <button type="button" class="tool" id="next-hint-btn" title="تلميح البكسل التالي" aria-pressed="true">💡</button>
             <button type="button" class="tool" id="grid-btn" title="شبكة" aria-pressed="true">▦</button>
             <button type="button" class="tool" id="ref-btn" title="مرجع" aria-pressed="false">▣</button>
           </div>
@@ -232,6 +239,7 @@
         <button type="button" class="mob-btn" id="mob-fill" title="ملء">◫</button>
         <button type="button" class="mob-btn" id="mob-undo" title="تراجع" disabled>↶</button>
         <button type="button" class="mob-btn" id="mob-hint" title="معاينة" aria-pressed="false">◉</button>
+        <button type="button" class="mob-btn active" id="mob-next" title="تلميح التالي" aria-pressed="true">💡</button>
         <button type="button" class="mob-btn mob-accent" id="mob-colors" title="الألوان">🎨</button>
       </div>
       <div class="colors-backdrop" id="colors-backdrop" hidden></div>
@@ -239,6 +247,8 @@
   </div>
 
   <div id="toast" class="toast" hidden></div>
+  <script src="play-data.js"></script>
+  <script src="tutorial.js"></script>
   <script src="game.js"></script>
   <script src="pwa-register.js"></script>
 </body>

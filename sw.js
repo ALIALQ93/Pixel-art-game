@@ -1,4 +1,4 @@
-const CACHE = "pixel-games-v1";
+const CACHE = "pixel-games-v2";
 const ASSETS = [
   "./",
   "./index.html",
@@ -6,6 +6,9 @@ const ASSETS = [
   "./puzzle-game.html",
   "./style.css",
   "./game.js",
+  "./play-data.js",
+  "./tutorial.js",
+  "./home.js",
   "./manifest.json",
   "./favicon.svg",
   "./icons/icon-192.svg",
