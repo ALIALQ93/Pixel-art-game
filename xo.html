@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#f3ecfb" />
+  <meta name="description" content="إكس أو للهاتف — لاعبان أو مجموعة حتى أربعة على نفس الجهاز، أو ضد الكمبيوتر" />
+  <meta property="og:type" content="website" />
+  <meta property="og:locale" content="ar_SA" />
+  <meta property="og:site_name" content="عالم البكسل" />
+  <meta property="og:title" content="إكس أو — عالم البكسل" />
+  <meta property="og:description" content="لوحة لمس أنيقة. العب مع أصدقائك على هاتف واحد أو تحدَّ الكمبيوتر." />
+  <meta property="og:image" content="https://alialq93.github.io/Pixel-art-game/og-cover.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:url" content="https://alialq93.github.io/Pixel-art-game/xo.html" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="إكس أو — عالم البكسل" />
+  <meta name="twitter:description" content="لوحة لمس أنيقة للاعبين أو ضد الكمبيوتر." />
+  <meta name="twitter:image" content="https://alialq93.github.io/Pixel-art-game/og-cover.png" />
+  <title>إكس أو — عالم البكسل</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="xo-body">
+  <div class="blob b1" aria-hidden="true"></div>
+  <div class="blob b2" aria-hidden="true"></div>
+  <div class="blob b3" aria-hidden="true"></div>
+
+  <nav class="site-nav" aria-label="التنقل">
+    <a href="index.html">🏠 الرئيسية</a>
+    <a href="color.html">🎨 تلوين بالبكسل</a>
+    <a href="puzzle-game.html">🧩 بازل الصور</a>
+    <a href="xo.html" class="active">⭕ إكس أو</a>
+  </nav>
+
+  <main class="app xo-app">
+    <section id="lobby">
+      <header class="hero">
+        <p class="eyebrow">لوحة لمس · هاتف واحد</p>
+        <h1>إكس أو</h1>
+        <p class="lead">مرّروا الهاتف بينكم، أو واجهوا الكمبيوتر. اللوحة تكبر مع عدد اللاعبين، وأول من يبلغ الهدف يفوز بالمباراة.</p>
+      </header>
+
+      <div class="xo-panel">
+        <p class="xo-label">طريقة اللعب</p>
+        <div class="xo-chips" id="mode-chips">
+          <button type="button" class="xo-chip on" data-mode="duo">لاعبان</button>
+          <button type="button" class="xo-chip" data-mode="party">مجموعة</button>
+          <button type="button" class="xo-chip" data-mode="ai">ضد الكمبيوتر</button>
+        </div>
+
+        <div id="party-box" hidden>
+          <p class="xo-label">عدد اللاعبين</p>
+          <div class="xo-chips" id="count-chips">
+            <button type="button" class="xo-chip on" data-count="3">٣ لاعبين</button>
+            <button type="button" class="xo-chip" data-count="4">٤ لاعبين</button>
+          </div>
+        </div>
+
+        <div id="ai-box" hidden>
+          <p class="xo-label">مستوى الكمبيوتر</p>
+          <div class="xo-chips" id="diff-chips">
+            <button type="button" class="xo-chip" data-diff="easy">سهل</button>
+            <button type="button" class="xo-chip on" data-diff="medium">متوسط</button>
+            <button type="button" class="xo-chip" data-diff="hard">صعب</button>
+          </div>
+          <p class="xo-label">من يبدأ</p>
+          <div class="xo-chips" id="first-chips">
+            <button type="button" class="xo-chip on" data-first="human">أنت</button>
+            <button type="button" class="xo-chip" data-first="ai">الكمبيوتر</button>
+            <button type="button" class="xo-chip" data-first="random">عشوائي</button>
+          </div>
+        </div>
+
+        <p class="xo-label">اللوحة</p>
+        <div class="xo-chips" id="board-chips"></div>
+
+        <p class="xo-label">طول المباراة</p>
+        <div class="xo-chips" id="target-chips">
+          <button type="button" class="xo-chip" data-target="1">جولة واحدة</button>
+          <button type="button" class="xo-chip on" data-target="2">حتى فوزين</button>
+          <button type="button" class="xo-chip" data-target="3">حتى ٣ فوزات</button>
+        </div>
+
+        <p class="xo-label">اللاعبون</p>
+        <div class="xo-names" id="name-fields"></div>
+
+        <label class="xo-check" id="handoff-row">
+          <input type="checkbox" id="handoff-toggle" />
+          تسليم الهاتف بين الأدوار
+        </label>
+        <label class="xo-check">
+          <input type="checkbox" id="sound-toggle" checked />
+          الأصوات
+        </label>
+
+        <p class="xo-hint" id="rule-hint"></p>
+
+        <details class="xo-rules">
+          <summary>كيف تلعب؟</summary>
+          <ul>
+            <li>اضغط خانة فارغة لوضع رمزك. كل لاعب له شكل ولون مختلفان.</li>
+            <li>الفوز بخط مستقيم أفقي أو عمودي أو قطري بالطول المطلوب.</li>
+            <li>في المجموعة مرّروا الهاتف لصاحب الدور. يمكن إظهار شاشة تسليم حتى لا تُضغط الخانة مرتين.</li>
+            <li>على لوحة ٣×٣، المستوى الصعب يلعب بإتقان — أفضل نتيجة تعادل.</li>
+            <li>التراجع يلغي آخر حركة، ومع الكمبيوتر يلغي حركتك وردّه معاً.</li>
+          </ul>
+        </details>
+
+        <button type="button" class="btn primary xo-start" id="start-btn">ابدأ اللعب</button>
+      </div>
+    </section>
+
+    <section id="match" class="xo-match" hidden>
+      <div class="xo-scores" id="scores" aria-label="النتائج"></div>
+      <div class="xo-turn" id="turn" aria-live="polite">
+        <div class="xo-turn-mark"></div>
+        <div>
+          <small>الدور الآن</small>
+          <strong></strong>
+        </div>
+      </div>
+      <div class="xo-meta">
+        <span id="rule"></span>
+        <span><span id="moves">٠ حركة</span> · <span id="clock">0:00</span></span>
+      </div>
+      <div class="xo-board-frame" id="frame">
+        <div class="xo-board" id="xo-grid" role="grid" aria-label="لوحة إكس أو"></div>
+        <svg class="xo-winline" id="winline" aria-hidden="true"></svg>
+      </div>
+      <div class="xo-actions">
+        <button type="button" class="btn" id="undo-btn">تراجع</button>
+        <button type="button" class="btn" id="replay-btn">إعادة الجولة</button>
+        <button type="button" class="btn" id="sound-btn">الصوت</button>
+        <button type="button" class="btn ghost" id="lobby-btn">الإعدادات</button>
+      </div>
+    </section>
+  </main>
+
+  <div class="xo-overlay" id="handoff" hidden>
+    <div class="xo-overlay-card" role="dialog" aria-labelledby="handoff-name">
+      <p>مرّر الهاتف إلى</p>
+      <div class="xo-overlay-mark" id="handoff-mark"></div>
+      <h2 id="handoff-name"></h2>
+      <p id="handoff-rule"></p>
+      <div class="xo-overlay-actions">
+        <button type="button" class="btn primary" id="handoff-go">أنا جاهز</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="xo-overlay" id="modal" hidden>
+    <div class="xo-overlay-card" role="dialog" aria-labelledby="modal-title">
+      <div class="xo-confetti" id="confetti" aria-hidden="true"></div>
+      <div class="xo-overlay-mark" id="modal-mark"></div>
+      <h2 id="modal-title"></h2>
+      <p id="modal-sub"></p>
+      <p id="modal-scores"></p>
+      <div class="xo-overlay-actions">
+        <button type="button" class="btn primary" id="modal-next">الجولة التالية</button>
+        <button type="button" class="btn" id="share-btn">مشاركة النتيجة</button>
+        <button type="button" class="btn ghost" id="modal-lobby">الإعدادات</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="play-data.js"></script>
+  <script src="xo.js"></script>
+  <script src="pwa-register.js"></script>
+</body>
+</html>

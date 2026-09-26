@@ -13,6 +13,10 @@
     { id: "puzzle_pro", icon: "🏆", name: "محترف", desc: "أكمل بازل 8×8 أو أكبر" },
     { id: "daily_done", icon: "☀️", name: "تحدي اليوم", desc: "أكمل تحدي اليوم" },
     { id: "streak_3", icon: "🔥", name: "سلسلة 3 أيام", desc: "العب 3 أيام متتالية" },
+    { id: "xo_first", icon: "⭕", name: "أول جولة", desc: "أكمل أول جولة إكس أو" },
+    { id: "xo_ai", icon: "🤖", name: "خصم عنيد", desc: "اهزم الكمبيوتر على المستوى الصعب" },
+    { id: "xo_streak", icon: "⚡", name: "سلسلة إكس أو", desc: "ثلاث انتصارات متتالية ضد الكمبيوتر" },
+    { id: "xo_party", icon: "👥", name: "سهرة", desc: "أكمل جولة مع ثلاثة لاعبين أو أكثر" },
   ];
 
   function defaultData() {
@@ -23,6 +27,9 @@
         totalPlaySec: 0,
         bestColorAccuracy: 0,
         bestPuzzleMoves: null,
+        xoGames: 0,
+        xoWins: 0,
+        xoStreak: 0,
       },
       streak: { lastDay: "", count: 0 },
       daily: { date: "", colorDone: false },
@@ -73,6 +80,7 @@
     if (data.stats.puzzleWins >= 1) unlock(data, "puzzle_first");
     if (data.streak.count >= 3) unlock(data, "streak_3");
     if (data.daily.colorDone && data.daily.date === dateKey()) unlock(data, "daily_done");
+    if ((data.stats.xoGames || 0) >= 1) unlock(data, "xo_first");
     return data;
   }
 
@@ -127,6 +135,25 @@
     return data;
   }
 
+  function recordXoRound({ timeSec, vsAi, difficulty, players, humanWon }) {
+    let data = load();
+    data = touchStreak(data);
+    data.stats.xoGames = (data.stats.xoGames || 0) + 1;
+    data.stats.totalPlaySec += timeSec || 0;
+    if (vsAi && humanWon) {
+      data.stats.xoWins = (data.stats.xoWins || 0) + 1;
+      data.stats.xoStreak = (data.stats.xoStreak || 0) + 1;
+      if (difficulty === "hard") unlock(data, "xo_ai");
+      if (data.stats.xoStreak >= 3) unlock(data, "xo_streak");
+    } else if (vsAi) {
+      data.stats.xoStreak = 0;
+    }
+    if (players >= 3) unlock(data, "xo_party");
+    data = checkAchievements(data);
+    save(data);
+    return data;
+  }
+
   function getDailyDemoId() {
     const key = dateKey();
     let hash = 0;
@@ -165,6 +192,7 @@
     isDailyDone,
     recordColorComplete,
     recordPuzzleComplete,
+    recordXoRound,
     hasSeenTutorial,
     markTutorialSeen,
     getAchievementsList,

@@ -4,19 +4,19 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#f3ecfb" />
-  <meta name="description" content="ألعاب فنية تفاعلية — تلوين بالبكسل وبازل الصور" />
+  <meta name="description" content="ألعاب فنية تفاعلية — تلوين بالبكسل وبازل الصور وإكس أو" />
   <meta property="og:type" content="website" />
   <meta property="og:locale" content="ar_SA" />
   <meta property="og:site_name" content="عالم البكسل" />
   <meta property="og:title" content="عالم البكسل — ألعاب فنية تفاعلية" />
-  <meta property="og:description" content="حوّل صورك إلى فن بكسل أو اجمع قطع البازل. لعبتان ممتعة بالعربية." />
+  <meta property="og:description" content="تلوين بالبكسل، بازل الصور، وإكس أو على الهاتف. ثلاث ألعاب بالعربية." />
   <meta property="og:image" content="https://alialq93.github.io/Pixel-art-game/og-cover.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
   <meta property="og:url" content="https://alialq93.github.io/Pixel-art-game/" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="عالم البكسل — ألعاب فنية تفاعلية" />
-  <meta name="twitter:description" content="حوّل صورك إلى فن بكسل أو اجمع قطع البازل." />
+  <meta name="twitter:description" content="تلوين بالبكسل، بازل الصور، وإكس أو على الهاتف." />
   <meta name="twitter:image" content="https://alialq93.github.io/Pixel-art-game/og-cover.png" />
   <title>ألعاب البكسل — الرئيسية</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
@@ -35,7 +35,7 @@
     <header class="landing-hero">
       <p class="eyebrow">ألعاب فنية تفاعلية</p>
       <h1>عالم البكسل</h1>
-      <p class="lead">لعبتان ممتعتان لتمضية الوقت — حوّل صورك إلى فن بكسل أو اجمع قطع البازل.</p>
+      <p class="lead">ثلاث ألعاب لتمضية الوقت — لوّن بالبكسل، اجمع البازل، أو العب إكس أو مع أصدقائك.</p>
     </header>
 
     <div class="home-stats" id="home-stats" aria-label="إحصائيات"></div>
@@ -68,6 +68,15 @@
         <h2>بازل الصور</h2>
         <p>اضغط قطعتين لتبديلهما حتى تكتمل الصورة — من السهل إلى المستحيل.</p>
         <span class="game-card-cta">ابدأ اللعب ←</span>
+      </a>
+
+      <a href="xo.html" class="game-card">
+        <div class="game-card-icon" aria-hidden="true">
+          <canvas id="card-xo" width="80" height="80"></canvas>
+        </div>
+        <h2>إكس أو</h2>
+        <p>لوحة للمس على الهاتف — لاعبان، مجموعة حتى أربعة، أو تحدٍّ ضد الكمبيوتر.</p>
+        <span class="game-card-cta">ابدأ التحدي ←</span>
       </a>
     </div>
 
@@ -111,6 +120,44 @@
           pz.globalAlpha = 1;
         }
       }
+      const xo = document.getElementById("card-xo").getContext("2d");
+      xo.fillStyle = "#fffdfb";
+      xo.fillRect(0, 0, 80, 80);
+      xo.strokeStyle = "#efe6f6";
+      xo.lineWidth = 4;
+      xo.lineCap = "round";
+      for (let i = 1; i < 3; i++) {
+        xo.beginPath();
+        xo.moveTo(10, i * 26 + 1);
+        xo.lineTo(70, i * 26 + 1);
+        xo.stroke();
+        xo.beginPath();
+        xo.moveTo(i * 26 + 1, 10);
+        xo.lineTo(i * 26 + 1, 70);
+        xo.stroke();
+      }
+      xo.lineWidth = 4;
+      xo.strokeStyle = "#d4537e";
+      xo.beginPath();
+      xo.moveTo(16, 16);
+      xo.lineTo(32, 32);
+      xo.moveTo(32, 16);
+      xo.lineTo(16, 32);
+      xo.stroke();
+      xo.strokeStyle = "#0f9d8f";
+      xo.beginPath();
+      xo.arc(53, 27, 9, 0, Math.PI * 2);
+      xo.stroke();
+      xo.beginPath();
+      xo.arc(27, 53, 9, 0, Math.PI * 2);
+      xo.stroke();
+      xo.strokeStyle = "#d4537e";
+      xo.beginPath();
+      xo.moveTo(44, 44);
+      xo.lineTo(62, 62);
+      xo.moveTo(62, 44);
+      xo.lineTo(44, 62);
+      xo.stroke();
     })();
   </script>
   <script src="play-data.js"></script>
