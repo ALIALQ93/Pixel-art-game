@@ -5,19 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="theme-color" content="#f3ecfb" />
-  <meta name="description" content="إكس أو للهاتف — لاعبان أو مجموعة حتى أربعة على نفس الجهاز، أو ضد الكمبيوتر" />
+  <meta name="description" content="إكس أو للهاتف — على جهاز واحد، أو أونلاين برمز غرفة، أو ضد الكمبيوتر" />
   <meta property="og:type" content="website" />
   <meta property="og:locale" content="ar_SA" />
   <meta property="og:site_name" content="عالم البكسل" />
   <meta property="og:title" content="إكس أو — عالم البكسل" />
-  <meta property="og:description" content="لوحة لمس أنيقة. العب مع أصدقائك على هاتف واحد أو تحدَّ الكمبيوتر." />
+  <meta property="og:description" content="لوحة لمس أنيقة. العب على هاتف واحد، أو أونلاين برمز غرفة، أو ضد الكمبيوتر." />
   <meta property="og:image" content="https://alialq93.github.io/Pixel-art-game/og-cover.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
   <meta property="og:url" content="https://alialq93.github.io/Pixel-art-game/xo.html" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="إكس أو — عالم البكسل" />
-  <meta name="twitter:description" content="لوحة لمس أنيقة للاعبين أو ضد الكمبيوتر." />
+  <meta name="twitter:description" content="لوحة لمس أنيقة: هاتف واحد، أونلاين برمز غرفة، أو ضد الكمبيوتر." />
   <meta name="twitter:image" content="https://alialq93.github.io/Pixel-art-game/og-cover.png" />
   <title>إكس أو — عالم البكسل</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
@@ -44,15 +44,16 @@
       <header class="hero">
         <p class="eyebrow">لوحة لمس · هاتف واحد</p>
         <h1>إكس أو</h1>
-        <p class="lead">مرّروا الهاتف بينكم، أو واجهوا الكمبيوتر. اللوحة تكبر مع عدد اللاعبين، وأول من يبلغ الهدف يفوز بالمباراة.</p>
+        <p class="lead">على هاتف واحد، أو كل لاعب على هاتفه برمز غرفة، أو ضد الكمبيوتر.</p>
       </header>
 
-      <div class="xo-panel">
+      <div class="xo-panel" id="setup-panel">
         <p class="xo-label">طريقة اللعب</p>
         <div class="xo-chips" id="mode-chips">
           <button type="button" class="xo-chip on" data-mode="duo">لاعبان</button>
           <button type="button" class="xo-chip" data-mode="party">مجموعة</button>
           <button type="button" class="xo-chip" data-mode="ai">ضد الكمبيوتر</button>
+          <button type="button" class="xo-chip" data-mode="online">أونلاين</button>
         </div>
 
         <div id="party-box" hidden>
@@ -88,8 +89,18 @@
           <button type="button" class="xo-chip" data-target="3">حتى ٣ فوزات</button>
         </div>
 
-        <p class="xo-label">اللاعبون</p>
+        <p class="xo-label" id="names-label">اللاعبون</p>
         <div class="xo-names" id="name-fields"></div>
+
+        <div id="online-box" hidden>
+          <p class="xo-hint">كل لاعب يفتح اللعبة على هاتفه. أنشئ غرفة وشارك الرمز، أو أدخل رمز صديقك.</p>
+          <div class="xo-join-row">
+            <input id="online-code" maxlength="5" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="الرمز" aria-label="رمز الغرفة" />
+            <button type="button" class="btn" id="online-join">انضم</button>
+          </div>
+          <p class="xo-hint" id="online-status"></p>
+          <button type="button" class="btn primary xo-start" id="online-create">إنشاء غرفة</button>
+        </div>
 
         <label class="xo-check" id="handoff-row">
           <input type="checkbox" id="handoff-toggle" />
@@ -109,11 +120,21 @@
             <li>الفوز بخط مستقيم أفقي أو عمودي أو قطري بالطول المطلوب.</li>
             <li>في المجموعة مرّروا الهاتف لصاحب الدور. يمكن إظهار شاشة تسليم حتى لا تُضغط الخانة مرتين.</li>
             <li>على لوحة ٣×٣، المستوى الصعب يلعب بإتقان — أفضل نتيجة تعادل.</li>
+            <li>أونلاين: أنشئ غرفة وشارك الرمز. صديقك يدخله من هاتفه وتلعبان معاً.</li>
             <li>التراجع يلغي آخر حركة، ومع الكمبيوتر يلغي حركتك وردّه معاً.</li>
           </ul>
         </details>
 
         <button type="button" class="btn primary xo-start" id="start-btn">ابدأ اللعب</button>
+      </div>
+
+      <div class="xo-panel" id="online-wait" hidden>
+        <p class="xo-label">رمز الغرفة</p>
+        <p class="xo-code" id="online-room-code"></p>
+        <p class="xo-hint" id="online-wait-text">بانتظار اللاعب الآخر…</p>
+        <button type="button" class="btn primary" id="online-share">مشاركة الرابط</button>
+        <button type="button" class="btn" id="online-copy">نسخ الرمز</button>
+        <button type="button" class="btn ghost" id="online-cancel">إلغاء</button>
       </div>
     </section>
 
@@ -128,7 +149,7 @@
       </div>
       <div class="xo-meta">
         <span id="rule"></span>
-        <span><span id="moves">٠ حركة</span> · <span id="clock">0:00</span></span>
+        <span><span id="link-state"></span> <span id="moves">٠ حركة</span> · <span id="clock">0:00</span></span>
       </div>
       <div class="xo-board-frame" id="frame">
         <div class="xo-board" id="xo-grid" role="grid" aria-label="لوحة إكس أو"></div>
@@ -171,6 +192,7 @@
   </div>
 
   <script src="play-data.js"></script>
+  <script src="xo-net.js"></script>
   <script src="xo.js"></script>
   <script src="pwa-register.js"></script>
 </body>

@@ -45,6 +45,20 @@
   let timerId = 0;
   let roundStart = 0;
 
+  const net = {
+    seat: null,
+    code: "",
+    seq: 0,
+    token: "",
+    hostToken: "",
+    guestToken: "",
+    myName: "",
+    last: null,
+    waitTimer: 0,
+  };
+
+  const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
   const $ = (id) => document.getElementById(id);
 
   function winNeed(size) {
@@ -63,6 +77,12 @@
   }
 
   function boardOptions() {
+    if (state.mode === "online") {
+      return [
+        { size: 3, label: "٣×٣", hint: "كلاسيكي" },
+        { size: 4, label: "٤×٤", hint: "٣ على التوالي" },
+      ];
+    }
     if (state.mode === "party" && state.partyCount >= 4) {
       return [
         { size: 5, label: "٥×٥", hint: "٤ على التوالي" },
@@ -155,7 +175,7 @@
 
   function renderNames() {
     const box = $("name-fields");
-    const count = state.mode === "party" ? state.partyCount : state.mode === "ai" ? 1 : 2;
+    const count = state.mode === "party" ? state.partyCount : state.mode === "ai" || state.mode === "online" ? 1 : 2;
     const key = `${state.mode}:${count}`;
     if (box.dataset.key === key) {
       box.querySelectorAll("[data-name-index]").forEach((input) => {
@@ -167,11 +187,12 @@
     box.dataset.key = key;
     const fields = [];
     for (let i = 0; i < count; i++) {
+      const label = state.mode === "online" ? "اسمك" : DEFAULT_NAMES[i];
       fields.push(`
         <label class="xo-name">
           <span class="xo-swatch" style="--p:${COLORS[i]}">${MARKS[i]}</span>
           <input data-name-index="${i}" maxlength="14" enterkeyhint="done" autocomplete="off"
-            placeholder="${DEFAULT_NAMES[i]}" value="${escapeHtml(state.names[i] || "")}" aria-label="${DEFAULT_NAMES[i]}" />
+            placeholder="${label}" value="${escapeHtml(state.names[i] || "")}" aria-label="${label}" />
         </label>`);
     }
     if (state.mode === "ai") {
@@ -186,6 +207,7 @@
 
   function ruleSentence() {
     const need = winNeed(state.size) === 3 ? "ثلاثة" : "أربعة";
+    if (state.mode === "online") return `كل لاعب على هاتفه. الفوز بخط من ${need} رموز.`;
     if (state.mode === "ai") return `أنت ضد الكمبيوتر. الفوز بخط من ${need} رموز.`;
     if (state.mode === "party") {
       const crowd = state.partyCount === 4 ? "أربعة لاعبين" : "ثلاثة لاعبين";
@@ -203,7 +225,12 @@
     setChips($("target-chips"), "target", state.target);
     $("party-box").hidden = state.mode !== "party";
     $("ai-box").hidden = state.mode !== "ai";
-    $("handoff-row").hidden = state.mode === "ai";
+    $("online-box").hidden = state.mode !== "online";
+    $("start-btn").hidden = state.mode === "online";
+    $("handoff-row").hidden = state.mode === "ai" || state.mode === "online";
+    $("names-label").textContent = state.mode === "online" ? "اسمك" : "اللاعبون";
+    $("online-wait").hidden = true;
+    $("setup-panel").hidden = false;
     $("handoff-toggle").checked = state.handoff;
     $("sound-toggle").checked = state.sound;
     renderBoardChips();
@@ -636,12 +663,16 @@
     renderMeta();
     renderBoard();
     const undo = $("undo-btn");
-    undo.disabled = state.over || state.thinking || state.waiting || !state.history.length;
+    const online = state.mode === "online";
+    undo.hidden = online;
+    $("replay-btn").hidden = online;
+    undo.disabled = online || state.over || state.thinking || state.waiting || !state.history.length;
+    $("lobby-btn").textContent = state.mode === "online" ? "مغادرة" : "الإعدادات";
     updateSoundButton();
   }
 
   function shouldHandoff() {
-    if (state.mode === "ai" || !state.handoff || state.over) return false;
+    if (state.mode === "ai" || state.mode === "online" || !state.handoff || state.over) return false;
     return !state.players[state.turn].ai;
   }
 
@@ -696,10 +727,19 @@
     const full = state.board.every((cell) => cell != null);
     if (win || full) {
       finish(win);
+      if (state.mode === "online") {
+        net.seq += 1;
+        publishGame();
+      }
       return;
     }
     state.turn = (state.starter + state.history.length) % state.players.length;
     renderMatch();
+    if (state.mode === "online") {
+      net.seq += 1;
+      publishGame();
+      return;
+    }
     if (shouldHandoff()) {
       openHandoff();
       return;
@@ -717,6 +757,7 @@
       cell.classList.add("shake");
       return;
     }
+    if (state.mode === "online" && net.seat !== state.turn) return;
     place(index);
   }
 
@@ -834,13 +875,33 @@
   }
 
   function nextRound() {
-    if (matchWon()) {
+    const champion = matchWon();
+    if (champion) {
       state.scores = state.players.map(() => 0);
       state.round = 1;
-      state.starter = startingIndex();
+      state.starter = state.mode === "online" ? (state.starter + 1) % 2 : startingIndex();
     } else {
       state.starter = (state.starter + 1) % state.players.length;
       state.round += 1;
+    }
+    if (state.mode === "online") {
+      clearTimeout(state.modalTimer);
+      state.history = [];
+      state.board = Array(state.size * state.size).fill(null);
+      state.winCells = null;
+      state.winner = null;
+      state.over = false;
+      state.lock = false;
+      state.turn = state.starter;
+      lineKey = null;
+      const svg = $("winline");
+      if (svg) svg.innerHTML = "";
+      hideOverlays();
+      net.seq += 1;
+      startClock();
+      renderMatch();
+      publishGame();
+      return;
     }
     resetBoard(true);
   }
@@ -862,9 +923,15 @@
     clearTimeout(state.aiTimer);
     clearTimeout(state.modalTimer);
     clearInterval(timerId);
+    timerId = 0;
     hideOverlays();
+    if (state.mode === "online" && window.XoNet) XoNet.stop();
+    if (net.myName) state.names[0] = net.myName;
+    net.seq = 0;
+    net.seat = null;
     $("match").hidden = true;
     $("lobby").hidden = false;
+    setLink("");
     syncLobby();
   }
 
@@ -930,6 +997,346 @@
     } catch (_) {}
   }
 
+  function roomTopic(code) {
+    return `pixelxo/v1/${code}`;
+  }
+
+  function myToken() {
+    let token = sessionStorage.getItem("xo-token");
+    if (!token) {
+      token = Math.random().toString(36).slice(2, 10);
+      sessionStorage.setItem("xo-token", token);
+    }
+    return token;
+  }
+
+  function makeCode() {
+    const bytes = new Uint8Array(5);
+    crypto.getRandomValues(bytes);
+    return [...bytes].map((byte) => CODE_ALPHABET[byte % CODE_ALPHABET.length]).join("");
+  }
+
+  function cleanCode(value) {
+    return String(value || "").toUpperCase().replace(/[^A-Z2-9]/g, "").slice(0, 5);
+  }
+
+  function setStatus(text) {
+    const status = $("online-status");
+    if (status) status.textContent = text || "";
+  }
+
+  function setLink(text) {
+    const el = $("link-state");
+    if (el) el.textContent = text || "";
+  }
+
+  function gamePayload() {
+    return {
+      seq: net.seq,
+      size: state.size,
+      target: state.target,
+      names: [
+        state.players[0] ? state.players[0].name : nameAt(0),
+        state.players[1] ? state.players[1].name : "",
+      ],
+      hostToken: net.hostToken,
+      guestToken: net.guestToken,
+      history: state.history.slice(),
+      scores: state.scores.slice(),
+      starter: state.starter,
+      round: state.round,
+    };
+  }
+
+  function publishGame() {
+    if (!window.XoNet || !net.code) return;
+    const payload = gamePayload();
+    net.last = payload;
+    XoNet.publish(roomTopic(net.code), payload, true);
+  }
+
+  function netHandlers() {
+    return {
+      onJson: (_topic, data) => applyNet(data),
+      onDown: () => setLink("يعيد الاتصال"),
+      onUp: () => setLink("متصل"),
+    };
+  }
+
+  function showWait(text) {
+    $("online-room-code").textContent = net.code;
+    $("online-wait-text").textContent = text;
+    $("setup-panel").hidden = true;
+    $("online-wait").hidden = false;
+    $("lobby").hidden = false;
+    $("match").hidden = true;
+  }
+
+  function rememberRoom() {
+    sessionStorage.setItem("xo-room", JSON.stringify({ code: net.code, token: net.token }));
+  }
+
+  function rebuildFromHistory() {
+    state.board = Array(state.size * state.size).fill(null);
+    state.history.forEach((index, step) => {
+      state.board[index] = (state.starter + step) % 2;
+    });
+    state.turn = (state.starter + state.history.length) % 2;
+    const last = state.history[state.history.length - 1];
+    const win = last == null ? null : winnerFrom(state.board, state.size, winNeed(state.size), last);
+    const full = state.history.length > 0 && state.board.every((cell) => cell != null);
+    if (win) {
+      state.over = true;
+      state.winner = win.player;
+      state.winCells = win.cells;
+      state.lock = true;
+    } else if (full) {
+      state.over = true;
+      state.winner = null;
+      state.winCells = null;
+      state.lock = true;
+    } else {
+      state.over = false;
+      state.winner = null;
+      state.winCells = null;
+      state.lock = false;
+      lineKey = null;
+    }
+  }
+
+  function sameHistory(a, b) {
+    return a.length === b.length && a.every((value, index) => value === b[index]);
+  }
+
+  function legalUpdate(prev, next) {
+    if (!prev) return true;
+    if (next.hostToken !== prev.hostToken) return false;
+    if (prev.guestToken && next.guestToken !== prev.guestToken) return false;
+    if (next.history.length === prev.history.length + 1) {
+      if (!prev.history.every((value, index) => value === next.history[index])) return false;
+      const move = next.history[next.history.length - 1];
+      return move >= 0 && move < prev.size * prev.size && !prev.history.includes(move);
+    }
+    if (!next.history.length) return true;
+    return sameHistory(prev.history, next.history);
+  }
+
+  function enterMatch() {
+    $("lobby").hidden = true;
+    $("online-wait").hidden = true;
+    $("match").hidden = false;
+    if (!state.history.length) {
+      lineKey = null;
+      const svg = $("winline");
+      if (svg) svg.innerHTML = "";
+      startClock();
+    } else if (!timerId) {
+      startClock();
+    }
+    renderMatch();
+    setLink("متصل");
+  }
+
+  function applyNet(data) {
+    if (!data || typeof data.seq !== "number" || !Array.isArray(data.history)) return;
+    clearTimeout(net.waitTimer);
+    if (data.hostToken && data.hostToken === net.token) net.seat = 0;
+    else if (data.guestToken && data.guestToken === net.token) net.seat = 1;
+
+    if (net.seq > 0 && data.seq <= net.seq) return;
+    if (net.seat == null) {
+      if (data.guestToken) {
+        setStatus("هذه الغرفة ممتلئة.");
+        return;
+      }
+      net.seat = 1;
+      net.hostToken = data.hostToken;
+      net.guestToken = net.token;
+      net.seq = data.seq + 1;
+      state.mode = "online";
+      state.size = data.size || 3;
+      state.target = data.target || 1;
+      state.players = [
+        { name: (data.names && data.names[0]) || "لاعب 1", ai: false, color: COLORS[0], mark: 0 },
+        { name: net.myName || "لاعب 2", ai: false, color: COLORS[1], mark: 1 },
+      ];
+      state.scores = Array.isArray(data.scores) ? data.scores.slice() : [0, 0];
+      state.history = data.history.slice();
+      state.starter = data.starter || 0;
+      state.round = data.round || 1;
+      rebuildFromHistory();
+      rememberRoom();
+      publishGame();
+      enterMatch();
+      return;
+    }
+
+    if (net.last && !legalUpdate(net.last, data)) return;
+    const grew = data.history.length > state.history.length;
+    const mover = data.history.length ? (data.starter + data.history.length - 1) % 2 : -1;
+    net.seq = data.seq;
+    net.hostToken = data.hostToken || net.hostToken;
+    net.guestToken = data.guestToken || "";
+    net.last = data;
+    state.mode = "online";
+    state.size = data.size || state.size;
+    state.target = data.target || state.target;
+    state.players = [
+      { name: (data.names && data.names[0]) || "لاعب 1", ai: false, color: COLORS[0], mark: 0 },
+      { name: (data.names && data.names[1]) || "لاعب 2", ai: false, color: COLORS[1], mark: 1 },
+    ];
+    state.scores = Array.isArray(data.scores) ? data.scores.slice() : [0, 0];
+    state.history = data.history.slice();
+    state.starter = data.starter || 0;
+    state.round = data.round || 1;
+    rebuildFromHistory();
+    if (!data.guestToken) {
+      showWait("بانتظار اللاعب الآخر…");
+      return;
+    }
+    enterMatch();
+    if (grew && mover !== net.seat) {
+      if (state.over) {
+        if (state.winner == null) playDraw();
+        else playWin();
+        if (window.PlayData) {
+          PlayData.recordXoRound({
+            timeSec: elapsedSec(),
+            vsAi: false,
+            difficulty: "",
+            players: 2,
+            humanWon: state.winner === net.seat,
+          });
+        }
+      } else {
+        playPlace();
+        buzz(10);
+      }
+    }
+    if (state.over && $("modal").hidden) showModal();
+    else if (!state.over && !$("modal").hidden) hideOverlays();
+  }
+
+  async function connectRoom() {
+    if (!window.XoNet) throw new Error("offline");
+    await XoNet.start(netHandlers());
+    XoNet.subscribe(roomTopic(net.code));
+  }
+
+  async function createRoom() {
+    readNames();
+    savePrefs();
+    audio();
+    net.myName = (state.names[0] || "").trim() || "لاعب 1";
+    net.code = makeCode();
+    net.token = myToken();
+    net.seat = 0;
+    net.hostToken = net.token;
+    net.guestToken = "";
+    net.seq = 1;
+    net.last = null;
+    state.mode = "online";
+    ensureSize();
+    state.players = [
+      { name: net.myName, ai: false, color: COLORS[0], mark: 0 },
+      { name: "بانتظار…", ai: false, color: COLORS[1], mark: 1 },
+    ];
+    state.scores = [0, 0];
+    state.history = [];
+    state.round = 1;
+    state.starter = 0;
+    state.over = false;
+    setStatus("جارٍ فتح الغرفة…");
+    $("online-create").disabled = true;
+    try {
+      await connectRoom();
+      rememberRoom();
+      publishGame();
+      showWait("بانتظار اللاعب الآخر…");
+      setStatus("");
+    } catch (_) {
+      setStatus("تعذر الاتصال. تحقق من الإنترنت ثم أعد المحاولة.");
+      if (window.XoNet) XoNet.stop();
+    } finally {
+      $("online-create").disabled = false;
+    }
+  }
+
+  async function joinRoom() {
+    readNames();
+    savePrefs();
+    audio();
+    const code = cleanCode($("online-code").value);
+    $("online-code").value = code;
+    if (code.length !== 5) {
+      setStatus("اكتب رمز الغرفة من ٥ خانات.");
+      return;
+    }
+    net.myName = (state.names[0] || "").trim() || "لاعب 2";
+    net.code = code;
+    net.token = myToken();
+    net.seat = null;
+    net.seq = 0;
+    net.last = null;
+    net.hostToken = "";
+    net.guestToken = "";
+    setStatus("جارٍ الدخول إلى الغرفة…");
+    $("online-join").disabled = true;
+    try {
+      await connectRoom();
+      clearTimeout(net.waitTimer);
+      net.waitTimer = setTimeout(() => {
+        if (!net.seq && net.seat == null) setStatus("لا توجد غرفة بهذا الرمز.");
+      }, 7000);
+    } catch (_) {
+      setStatus("تعذر الاتصال. تحقق من الإنترنت ثم أعد المحاولة.");
+      if (window.XoNet) XoNet.stop();
+    } finally {
+      $("online-join").disabled = false;
+    }
+  }
+
+  async function shareRoom() {
+    const url = new URL("xo.html", location.href);
+    url.searchParams.set("room", net.code);
+    const text = `ادخل غرفة إكس أو بالرمز ${net.code}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "إكس أو", text, url: url.href });
+      } catch (_) {}
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(`${text}\n${url.href}`);
+      $("online-share").textContent = "تم نسخ الرابط";
+      setTimeout(() => {
+        $("online-share").textContent = "مشاركة الرابط";
+      }, 1400);
+    } catch (_) {}
+  }
+
+  async function copyCode() {
+    try {
+      await navigator.clipboard.writeText(net.code);
+      $("online-copy").textContent = "تم النسخ";
+      setTimeout(() => {
+        $("online-copy").textContent = "نسخ الرمز";
+      }, 1400);
+    } catch (_) {}
+  }
+
+  function resumeRoomLink() {
+    const code = cleanCode(new URLSearchParams(location.search).get("room"));
+    if (code.length !== 5) return;
+    state.mode = "online";
+    ensureSize();
+    syncLobby();
+    $("online-code").value = code;
+    let saved = {};
+    try { saved = JSON.parse(sessionStorage.getItem("xo-room") || "{}"); } catch (_) {}
+    if (saved.code === code && saved.token === myToken()) joinRoom();
+  }
+
   function bind() {
     $("lobby").addEventListener("click", onLobbyClick);
     $("name-fields").addEventListener("input", (event) => {
@@ -970,9 +1377,19 @@
     $("modal-next").addEventListener("click", nextRound);
     $("modal-lobby").addEventListener("click", showLobby);
     $("share-btn").addEventListener("click", shareResult);
+    $("online-create").addEventListener("click", createRoom);
+    $("online-join").addEventListener("click", joinRoom);
+    $("online-share").addEventListener("click", shareRoom);
+    $("online-copy").addEventListener("click", copyCode);
+    $("online-cancel").addEventListener("click", showLobby);
+    $("online-code").addEventListener("input", (event) => {
+      const cleaned = cleanCode(event.target.value);
+      if (event.target.value !== cleaned) event.target.value = cleaned;
+    });
   }
 
   loadPrefs();
   bind();
   syncLobby();
+  resumeRoomLink();
 })();

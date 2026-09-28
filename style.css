@@ -2185,3 +2185,39 @@ body.in-workspace-fullscreen .blob {
     stroke-dashoffset: 0;
   }
 }
+
+.xo-join-row {
+  display: flex;
+  gap: 8px;
+}
+
+.xo-join-row input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  text-align: center;
+  direction: ltr;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 10px 12px;
+  background: #fff;
+}
+
+.xo-code {
+  margin: 0;
+  font-size: 2.1rem;
+  font-weight: 800;
+  letter-spacing: 0.28em;
+  text-align: center;
+  direction: ltr;
+  color: #6d5cae;
+}
+
+#link-state:empty {
+  display: none;
+}
