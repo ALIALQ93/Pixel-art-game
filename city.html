@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#f3ecfb" />
+  <meta name="description" content="مدينة البكسل — لوحة عقارات من لاعبين إلى أربعة، مع فريقين على هاتف واحد." />
+  <meta property="og:type" content="website" />
+  <meta property="og:locale" content="ar_SA" />
+  <meta property="og:site_name" content="عالم البكسل" />
+  <meta property="og:title" content="مدينة البكسل — عالم البكسل" />
+  <meta property="og:description" content="اشترِ، زايد، وابنِ. من لاعبين إلى أربعة على هاتف واحد، أو فريقان." />
+  <meta property="og:image" content="https://alialq93.github.io/Pixel-art-game/og-cover.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:url" content="https://alialq93.github.io/Pixel-art-game/city.html" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="مدينة البكسل — عالم البكسل" />
+  <meta name="twitter:description" content="لوحة عقارات قصيرة: شراء، مزايدة، وبناء. فريقان أو الجميع ضد الجميع." />
+  <meta name="twitter:image" content="https://alialq93.github.io/Pixel-art-game/og-cover.png" />
+  <title>مدينة البكسل — عالم البكسل</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="city-body">
+  <div class="blob b1" aria-hidden="true"></div>
+  <div class="blob b2" aria-hidden="true"></div>
+  <div class="blob b3" aria-hidden="true"></div>
+
+  <nav class="site-nav" aria-label="التنقل">
+    <a href="index.html">🏠 الرئيسية</a>
+    <a href="color.html">🎨 تلوين بالبكسل</a>
+    <a href="puzzle-game.html">🧩 بازل الصور</a>
+    <a href="xo.html">⭕ إكس أو</a>
+    <a href="city.html" class="active">🏙️ المدينة</a>
+  </nav>
+
+  <main class="app city-app">
+    <section id="city-setup">
+      <header class="hero">
+        <p class="eyebrow">لوحة عقارات · هاتف واحد</p>
+        <h1>مدينة البكسل</h1>
+        <p class="lead">اشترِ الشوارع، زايد حين يرفض غيرك، وأكمل لوناً قبل أن يكتمل الدوران الأربعون.</p>
+      </header>
+
+      <div class="xo-panel" id="city-resume" hidden>
+        <p class="lead" id="city-resume-text">هناك مباراة محفوظة على هذا الجهاز.</p>
+        <div class="xo-chips">
+          <button type="button" class="xo-chip on" id="city-resume-btn">استئناف</button>
+          <button type="button" class="xo-chip" id="city-discard-btn">مباراة جديدة</button>
+        </div>
+      </div>
+
+      <form class="xo-panel" id="city-form">
+        <p class="xo-label">حجم الطاولة</p>
+        <div class="xo-chips" id="city-size">
+          <button type="button" class="xo-chip on" data-size="2">لاعبان</button>
+          <button type="button" class="xo-chip" data-size="3">٣ لاعبين</button>
+          <button type="button" class="xo-chip" data-size="4">٤ لاعبين</button>
+        </div>
+
+        <div id="city-team-box" hidden>
+          <p class="xo-label">التحالف</p>
+          <div class="xo-chips">
+            <button type="button" class="xo-chip on" id="city-ffa" data-teams="0">الجميع ضد الجميع</button>
+            <button type="button" class="xo-chip" id="city-teams" data-teams="1">فريقان · ١مع٢ ضد ٣مع٤</button>
+          </div>
+        </div>
+
+        <p class="xo-label">المقاعد</p>
+        <div class="city-seats" id="city-seats"></div>
+
+        <button type="submit" class="city-start">ابدأ المدينة</button>
+        <p id="city-form-error" class="city-error" role="alert"></p>
+
+        <details class="city-help">
+          <summary>قواعد مختصرة</summary>
+          <ul>
+            <li>كل جانب يبدأ بـ ٨٠٠. المرور بالانطلاق يقبض ١٠٠.</li>
+            <li>من يرفض الشراء تُفتح مزايدة بخطوات ١٠. أعلى عرض يأخذ الشارع.</li>
+            <li>إيجار المجموعة يُدفع إذا ملكت الشوارع الثلاثة بلا بناء وبلا رهن.</li>
+            <li>البناء متوازن: بيت ثم فندق، وفرق الدرجات داخل اللون لا يتجاوز ١.</li>
+            <li>ثلاثة أزواج متتالية ترسل إلى الحبس. الخروج بزوج، أو بـ ٥٠، أو ببطاقة حرية.</li>
+            <li>بعد ٤٠ دوراناً يفوز الأعلى قيمة. الإفلاس يُخرج صاحبه فوراً.</li>
+          </ul>
+        </details>
+      </form>
+    </section>
+
+    <section id="city-play" hidden>
+      <div class="city-top">
+        <p id="city-status" class="city-status" aria-live="polite"></p>
+        <button type="button" class="city-quit" id="city-quit">إنهاء</button>
+      </div>
+      <div id="city-board" class="city-board" aria-label="لوحة مدينة البكسل"></div>
+      <div id="city-players" class="city-players"></div>
+      <p id="city-error" class="city-error" role="alert"></p>
+      <div id="city-actions" class="city-actions"></div>
+      <ol id="city-log" class="city-log" reversed></ol>
+      <div id="city-cover" class="city-cover" hidden>
+        <p id="city-cover-kicker">مرّر الجهاز</p>
+        <p id="city-cover-name"></p>
+        <button type="button" class="city-start" id="city-ready">أنا جاهز</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="play-data.js"></script>
+  <script src="city-rules.js"></script>
+  <script src="city.js"></script>
+  <script src="pwa-register.js"></script>
+</body>
+</html>

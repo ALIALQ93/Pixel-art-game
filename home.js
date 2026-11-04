@@ -13,6 +13,7 @@
         <div class="stat-pill"><strong>${data.stats.colorWins}</strong><span>لوحات</span></div>
         <div class="stat-pill"><strong>${data.stats.puzzleWins}</strong><span>بازل</span></div>
         <div class="stat-pill"><strong>${data.stats.xoGames || 0}</strong><span>إكس أو</span></div>
+        <div class="stat-pill"><strong>${data.stats.cityGames || 0}</strong><span>المدينة</span></div>
         <div class="stat-pill"><strong>${data.streak.count}</strong><span>أيام متتالية</span></div>
         <div class="stat-pill"><strong>${unlocked.size}</strong><span>شارات</span></div>`;
     }

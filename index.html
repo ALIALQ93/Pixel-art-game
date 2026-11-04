@@ -4,12 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#f3ecfb" />
-  <meta name="description" content="ألعاب فنية تفاعلية — تلوين بالبكسل وبازل الصور وإكس أو" />
+  <meta name="description" content="ألعاب فنية تفاعلية — تلوين بالبكسل وبازل الصور وإكس أو ومدينة البكسل" />
   <meta property="og:type" content="website" />
   <meta property="og:locale" content="ar_SA" />
   <meta property="og:site_name" content="عالم البكسل" />
   <meta property="og:title" content="عالم البكسل — ألعاب فنية تفاعلية" />
-  <meta property="og:description" content="تلوين بالبكسل، بازل الصور، وإكس أو على الهاتف. ثلاث ألعاب بالعربية." />
+  <meta property="og:description" content="تلوين بالبكسل، بازل الصور، إكس أو، ومدينة البكسل. أربع ألعاب بالعربية." />
   <meta property="og:image" content="https://alialq93.github.io/Pixel-art-game/og-cover.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
@@ -35,7 +35,7 @@
     <header class="landing-hero">
       <p class="eyebrow">ألعاب فنية تفاعلية</p>
       <h1>عالم البكسل</h1>
-      <p class="lead">ثلاث ألعاب لتمضية الوقت — لوّن بالبكسل، اجمع البازل، أو العب إكس أو مع أصدقائك.</p>
+      <p class="lead">أربع ألعاب لتمضية الوقت — لوّن بالبكسل، اجمع البازل، العب إكس أو، أو ابنِ مدينة.</p>
     </header>
 
     <div class="home-stats" id="home-stats" aria-label="إحصائيات"></div>
@@ -77,6 +77,15 @@
         <h2>إكس أو</h2>
         <p>لوحة للمس — على هاتف واحد أو أونلاين برمز غرفة.</p>
         <span class="game-card-cta">ابدأ التحدي ←</span>
+      </a>
+
+      <a href="city.html" class="game-card">
+        <div class="game-card-icon" aria-hidden="true">
+          <canvas id="card-city" width="80" height="80"></canvas>
+        </div>
+        <h2>مدينة البكسل</h2>
+        <p>اشترِ الشوارع وزايد وابنِ. من لاعبين إلى أربعة، أو فريقان على هاتف واحد.</p>
+        <span class="game-card-cta">ادخل المدينة ←</span>
       </a>
     </div>
 
@@ -158,6 +167,21 @@
       xo.moveTo(62, 44);
       xo.lineTo(44, 62);
       xo.stroke();
+
+      const city = document.getElementById("card-city").getContext("2d");
+      city.fillStyle = "#fffdfb";
+      city.fillRect(0, 0, 80, 80);
+      const blocks = ["#f2b8c6", "#a8d8cf", "#b7a4e0", "#f7d9a8"];
+      for (let i = 0; i < 8; i++) {
+        city.fillStyle = blocks[i % blocks.length];
+        const col = i < 4 ? 0 : 1;
+        const row = i % 4;
+        city.fillRect(8 + col * 34, 8 + row * 16, 30, 14);
+      }
+      city.fillStyle = "#d4537e";
+      city.beginPath();
+      city.arc(58, 58, 6, 0, Math.PI * 2);
+      city.fill();
     })();
   </script>
   <script src="play-data.js"></script>

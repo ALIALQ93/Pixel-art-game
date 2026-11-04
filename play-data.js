@@ -17,6 +17,10 @@
     { id: "xo_ai", icon: "🤖", name: "خصم عنيد", desc: "اهزم الكمبيوتر على المستوى الصعب" },
     { id: "xo_streak", icon: "⚡", name: "سلسلة إكس أو", desc: "ثلاث انتصارات متتالية ضد الكمبيوتر" },
     { id: "xo_party", icon: "👥", name: "سهرة", desc: "أكمل جولة مع ثلاثة لاعبين أو أكثر" },
+    { id: "city_first", icon: "🏙️", name: "أول مدينة", desc: "أكمل أول مباراة في مدينة البكسل" },
+    { id: "city_set", icon: "🎨", name: "لون كامل", desc: "أكمل مجموعة شوارع بلون واحد" },
+    { id: "city_hotel", icon: "🏨", name: "أول فندق", desc: "ابنِ فندقاً في مدينة البكسل" },
+    { id: "city_team", icon: "🤝", name: "فريق المدينة", desc: "اربح مباراة بفريق من اثنين" },
   ];
 
   function defaultData() {
@@ -30,6 +34,8 @@
         xoGames: 0,
         xoWins: 0,
         xoStreak: 0,
+        cityGames: 0,
+        cityWins: 0,
       },
       streak: { lastDay: "", count: 0 },
       daily: { date: "", colorDone: false },
@@ -81,6 +87,7 @@
     if (data.streak.count >= 3) unlock(data, "streak_3");
     if (data.daily.colorDone && data.daily.date === dateKey()) unlock(data, "daily_done");
     if ((data.stats.xoGames || 0) >= 1) unlock(data, "xo_first");
+    if ((data.stats.cityGames || 0) >= 1) unlock(data, "city_first");
     return data;
   }
 
@@ -154,6 +161,29 @@
     return data;
   }
 
+  function recordCityMilestone(kind) {
+    let data = load();
+    data = touchStreak(data);
+    if (kind === "set") unlock(data, "city_set");
+    if (kind === "hotel") unlock(data, "city_hotel");
+    data = checkAchievements(data);
+    save(data);
+    return data;
+  }
+
+  function recordCityMatch({ timeSec, humanWon, teamGame }) {
+    let data = load();
+    data = touchStreak(data);
+    data.stats.cityGames = (data.stats.cityGames || 0) + 1;
+    data.stats.totalPlaySec += timeSec || 0;
+    if (humanWon) data.stats.cityWins = (data.stats.cityWins || 0) + 1;
+    unlock(data, "city_first");
+    if (humanWon && teamGame) unlock(data, "city_team");
+    data = checkAchievements(data);
+    save(data);
+    return data;
+  }
+
   function getDailyDemoId() {
     const key = dateKey();
     let hash = 0;
@@ -193,6 +223,8 @@
     recordColorComplete,
     recordPuzzleComplete,
     recordXoRound,
+    recordCityMilestone,
+    recordCityMatch,
     hasSeenTutorial,
     markTutorialSeen,
     getAchievementsList,
