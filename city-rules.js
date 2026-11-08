@@ -154,6 +154,7 @@
       humanHotel: false,
       fx: null,
       startedAt: Date.now(),
+      playedMs: 0,
       statsSent: { set: false, hotel: false, match: false },
     };
     state.deck = shuffle(state, CARD_DEFS.map((c) => ({ id: c.id, name: c.name })));
@@ -375,7 +376,7 @@
         pushLog(s, p.name + " يمرّ بالانطلاق ويقبض ١٠٠.");
       }
     }
-    s.fx = { who: p.id, from, path, salaries };
+    appendFx(s, p.id, from, path, salaries);
   }
 
   function moveBack(s, steps) {
@@ -386,8 +387,19 @@
       p.position = (p.position + 19) % 20;
       path.push(p.position);
     }
-    s.fx = { who: p.id, from, path, salaries: [] };
+    appendFx(s, p.id, from, path, []);
     pushLog(s, p.name + " يرجع ثلاث خطوات.");
+  }
+
+  function appendFx(s, who, from, path, salaries) {
+    if (!path.length) return;
+    const extra = salaries || [];
+    if (s.fx && s.fx.who === who && s.fx.path && s.fx.path.length && s.fx.path[s.fx.path.length - 1] === from) {
+      s.fx.path = s.fx.path.concat(path);
+      s.fx.salaries = (s.fx.salaries || []).concat(extra);
+      return;
+    }
+    s.fx = { who, from, path: path.slice(), salaries: extra.slice() };
   }
 
   function sendToJail(s, p) {
@@ -396,12 +408,8 @@
     p.jailed = true;
     p.jailTurns = 0;
     s.pendingExtra = false;
-    if (s.fx && s.fx.path && s.fx.path.length && s.fx.path[s.fx.path.length - 1] === from) {
-      s.fx.path.push(5);
-      s.fx.jail = true;
-    } else {
-      s.fx = { who: p.id, from, path: [5], salaries: [], jail: true };
-    }
+    appendFx(s, p.id, from, [5], []);
+    if (s.fx) s.fx.jail = true;
   }
 
   function resolveLanding(s) {
@@ -594,7 +602,7 @@
       const i = (s.current + k) % n;
       if (s.participants[i].alive) active.push(i);
     }
-    s.auction = { cell, bid: 0, leader: null, active, turn: active[0] };
+    s.auction = { cell, bid: 0, leader: null, active, turn: active[0], step: 1 };
     s.phase = "auction";
     pushLog(s, "مزايدة على " + BOARD[cell].name + ".");
     if (!active.length) closeAuction(s);
@@ -621,7 +629,7 @@
     for (let k = 1; k <= a.active.length; k++) {
       const cand = a.active[(idx + k) % a.active.length];
       if (cand !== a.leader) {
-        a.turn = cand;
+        advanceAuction(a, cand);
         return null;
       }
     }
@@ -646,11 +654,16 @@
     for (let k = 0; k < a.active.length; k++) {
       const cand = a.active[(start + k) % a.active.length];
       if (a.leader != null && cand === a.leader) continue;
-      a.turn = cand;
+      advanceAuction(a, cand);
       return null;
     }
     closeAuction(s);
     return null;
+  }
+
+  function advanceAuction(a, id) {
+    a.turn = id;
+    a.step = (a.step || 0) + 1;
   }
 
   function closeAuction(s) {
@@ -802,7 +815,7 @@
     const takeFreedom = action.takeFreedom || 0;
     if (!moneyOk(giveCash) || !moneyOk(takeCash)) return "trade";
     if (giveCash > from.cash || takeCash > to.cash) return "cash";
-    if (giveFreedom < 0 || takeFreedom < 0) return "trade";
+    if (!Number.isInteger(giveFreedom) || !Number.isInteger(takeFreedom) || giveFreedom < 0 || takeFreedom < 0) return "trade";
     if (giveFreedom > from.freedom || takeFreedom > to.freedom) return "trade";
     if (overlaps(giveProps, takeProps)) return "trade";
     if (giveProps.some((c) => !propFree(s, from.id, c))) return "trade";
@@ -1057,9 +1070,15 @@
     const ids = GROUPS[cell.group];
     const full = ids.every((i) => {
       const q = state.props[i];
-      return q.owner === prop.owner && !q.mortgaged && q.level === 0;
+      return q.owner === prop.owner && !q.mortgaged;
     });
     return full ? cell.rent[1] : cell.rent[0];
+  }
+
+  function groupRent(state, group) {
+    let sum = 0;
+    GROUPS[group].forEach((i) => { sum += rentOf(state, i); });
+    return sum;
   }
 
   function hotelCount(s, pid) {
@@ -1221,6 +1240,12 @@
       if (buildBlock(state, p.id, cell.i)) return;
       const cost = BUILD[cell.group];
       if (p.cash - cost < reserve) return;
+      const prop = state.props[cell.i];
+      const before = groupRent(state, cell.group);
+      prop.level += 1;
+      const after = groupRent(state, cell.group);
+      prop.level -= 1;
+      if (after <= before) return;
       const hotel = cell.rent[3];
       if (hotel > best || (hotel === best && (pick == null || cell.i < pick))) {
         best = hotel;

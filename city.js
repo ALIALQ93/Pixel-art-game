@@ -25,15 +25,31 @@
   const seatsEl = document.getElementById("city-seats");
   const teamBox = document.getElementById("city-team-box");
 
+  const FFA_SEATS = [
+    { name: "أنت", bot: false },
+    { name: "خصم", bot: true },
+    { name: "ليان", bot: false },
+    { name: "خصم ٢", bot: true },
+  ];
+  const TEAM_SEATS = [
+    { name: "أنت", bot: false },
+    { name: "ليان", bot: false },
+    { name: "خصم", bot: true },
+    { name: "خصم ٢", bot: true },
+  ];
+
+  function cloneSeats(list) {
+    return list.map((seat) => ({ name: seat.name, bot: seat.bot }));
+  }
+
+  function sameSeats(list) {
+    return draft.seats.length === list.length && draft.seats.every((seat, i) => seat.name === list[i].name && !!seat.bot === !!list[i].bot);
+  }
+
   const draft = {
     size: 2,
     teams: false,
-    seats: [
-      { name: "أنت", bot: false },
-      { name: "خصم", bot: true },
-      { name: "ليان", bot: false },
-      { name: "خصم ٢", bot: true },
-    ],
+    seats: cloneSeats(FFA_SEATS),
   };
 
   let state = null;
@@ -46,9 +62,18 @@
   let takeSet = [];
   let giveCash = 0;
   let takeCash = 0;
+  let giveFreedom = 0;
+  let takeFreedom = 0;
   let bidValue = 10;
   let auctionCell = null;
   let visual = null;
+  let shownDice = null;
+  let diceRolling = false;
+  let motionTimer = 0;
+  const SOUND_KEY = "pixel-city-sound";
+  let soundOn = true;
+  let audioCtx = null;
+  try { soundOn = localStorage.getItem(SOUND_KEY) !== "0"; } catch (_) {}
 
   function esc(value) {
     return String(value).replace(/[&<>"']/g, (ch) => ({
@@ -72,9 +97,28 @@
     }
   }
 
+  function elapsedPlayMs() {
+    if (!state) return 0;
+    const running = state.activeSince ? Math.max(0, Date.now() - state.activeSince) : 0;
+    return (state.playedMs || 0) + running;
+  }
+
+  function freezePlayTime() {
+    if (!state || state.activeSince == null) return;
+    state.playedMs = elapsedPlayMs();
+    state.activeSince = null;
+  }
+
+  function resumePlayTime() {
+    if (!state || state.phase === "end" || document.hidden) return;
+    if (state.activeSince == null) state.activeSince = Date.now();
+  }
+
   function save() {
     if (!state) return;
+    freezePlayTime();
     try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (_) {}
+    resumePlayTime();
   }
 
   function clearSaved() {
@@ -95,7 +139,7 @@
     if (state.phase === "end" && !state.statsSent.match && PlayData.recordCityMatch) {
       const humanWon = (state.winners || []).some((id) => state.participants[id] && !state.participants[id].bot);
       PlayData.recordCityMatch({
-        timeSec: Math.max(0, Math.round((Date.now() - (state.startedAt || Date.now())) / 1000)),
+        timeSec: Math.max(0, Math.round(elapsedPlayMs() / 1000)),
         humanWon,
         teamGame: !!state.teams,
       });
@@ -125,6 +169,7 @@
     if (s.phase === "rolloff") return "off:" + id;
     if (s.phase === "roll" || s.phase === "jail_choice") return "turn:" + s.round + ":" + s.current;
     if (s.phase === "trade_response" && s.trade) return "trade:" + s.log.length + ":" + id;
+    if (s.phase === "auction" && s.auction) return "auction:" + s.auction.cell + ":" + id + ":" + (s.auction.step || 0);
     return null;
   }
 
@@ -136,6 +181,174 @@
         <button type="button" class="xo-chip ${seat.bot ? "" : "on"}" data-human="${i}">${seat.bot ? "آلي" : "إنسان"}</button>
       </label>`).join("");
     teamBox.hidden = draft.size !== 4;
+    const hint = document.getElementById("city-team-hint");
+    if (hint) hint.hidden = !draft.teams;
+  }
+
+  function audio() {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return null;
+    if (!audioCtx) audioCtx = new Ctx();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    return audioCtx;
+  }
+
+  function tone(freq, when, dur, type, gain) {
+    const ctx = audio();
+    if (!ctx || !soundOn) return;
+    const osc = ctx.createOscillator();
+    const amp = ctx.createGain();
+    osc.type = type || "sine";
+    osc.frequency.setValueAtTime(freq, when);
+    amp.gain.setValueAtTime(Math.max(gain, 0.001), when);
+    amp.gain.exponentialRampToValueAtTime(0.001, when + dur);
+    osc.connect(amp);
+    amp.connect(ctx.destination);
+    osc.start(when);
+    osc.stop(when + dur + 0.02);
+  }
+
+  function noise(dur, peak) {
+    const ctx = audio();
+    if (!ctx || !soundOn) return;
+    const n = Math.max(1, Math.floor(ctx.sampleRate * dur));
+    const buf = ctx.createBuffer(1, n, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / n);
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const filter = ctx.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.frequency.value = 1100;
+    const amp = ctx.createGain();
+    amp.gain.setValueAtTime(peak, ctx.currentTime);
+    amp.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+    src.connect(filter);
+    filter.connect(amp);
+    amp.connect(ctx.destination);
+    src.start();
+  }
+
+  function buzz(pattern) {
+    if (!soundOn || !navigator.vibrate) return;
+    try { navigator.vibrate(pattern); } catch (_) {}
+  }
+
+  function playSound(kind) {
+    const ctx = audio();
+    if (!ctx || !soundOn) return;
+    const t = ctx.currentTime;
+    if (kind === "roll") {
+      noise(0.24, 0.07);
+      tone(190, t, 0.05, "triangle", 0.04);
+      tone(250, t + 0.09, 0.05, "triangle", 0.035);
+      buzz(14);
+      return;
+    }
+    if (kind === "tick") {
+      tone(180 + Math.random() * 90, t, 0.03, "triangle", 0.02);
+      return;
+    }
+    if (kind === "land") {
+      tone(210, t, 0.07, "sine", 0.05);
+      tone(150, t + 0.06, 0.09, "triangle", 0.04);
+      buzz(10);
+      return;
+    }
+    if (kind === "double") {
+      tone(523, t, 0.08, "sine", 0.05);
+      tone(784, t + 0.08, 0.12, "sine", 0.05);
+      buzz([8, 30, 12]);
+      return;
+    }
+    if (kind === "step") {
+      tone(260 + Math.random() * 40, t, 0.045, "triangle", 0.03);
+      return;
+    }
+    if (kind === "salary") {
+      [523, 659, 784].forEach((freq, i) => tone(freq, t + i * 0.06, 0.1, "sine", 0.045));
+      return;
+    }
+    if (kind === "jail") {
+      tone(130, t, 0.16, "square", 0.03);
+      tone(90, t + 0.1, 0.2, "triangle", 0.04);
+      buzz(30);
+      return;
+    }
+    if (kind === "buy") {
+      tone(880, t, 0.06, "sine", 0.04);
+      tone(1175, t + 0.07, 0.1, "sine", 0.04);
+      return;
+    }
+    if (kind === "bid") {
+      tone(640, t, 0.05, "sine", 0.035);
+      return;
+    }
+    if (kind === "build") {
+      tone(392, t, 0.07, "triangle", 0.04);
+      tone(523, t + 0.08, 0.1, "triangle", 0.04);
+      return;
+    }
+    if (kind === "sell") {
+      tone(392, t, 0.08, "triangle", 0.035);
+      tone(262, t + 0.08, 0.1, "triangle", 0.035);
+      return;
+    }
+    if (kind === "pass") {
+      tone(300, t, 0.06, "triangle", 0.03);
+      return;
+    }
+    if (kind === "win") {
+      [523, 659, 784, 1046].forEach((freq, i) => tone(freq, t + i * 0.09, 0.16, "sine", 0.05));
+      buzz([12, 40, 16]);
+      return;
+    }
+    if (kind === "error") tone(196, t, 0.12, "sawtooth", 0.02);
+  }
+
+  function paintSound() {
+    const btn = document.getElementById("city-sound");
+    if (!btn) return;
+    btn.textContent = soundOn ? "صوت" : "صامت";
+    btn.setAttribute("aria-pressed", soundOn ? "true" : "false");
+  }
+
+  function calmMotion() {
+    return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  }
+
+  function haltMotion() {
+    window.clearTimeout(motionTimer);
+    motionTimer = 0;
+    diceRolling = false;
+    shownDice = null;
+  }
+
+  function faceDie(n, rolling, doubled) {
+    const pips = "<i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>";
+    const cls = (rolling ? " is-rolling" : "") + (doubled ? " is-double" : "");
+    const label = n ? "نرد " + n : "نرد";
+    return `<span class="die${cls}" data-face="${n}" role="img" aria-label="${label}">${pips}</span>`;
+  }
+
+  function cueAction(action) {
+    const map = {
+      BUY: "buy",
+      BID: "bid",
+      BUILD: "build",
+      SELL: "sell",
+      MORTGAGE: "sell",
+      UNMORTGAGE: "buy",
+      PASS: "pass",
+      DECLINE: "pass",
+      JAIL_PAY: "buy",
+      JAIL_CARD: "buy",
+      ACCEPT_TRADE: "buy",
+      REJECT_TRADE: "pass",
+      ADMIT: "jail",
+      PAY_DEBT: "buy",
+    };
+    if (map[action.type]) playSound(map[action.type]);
   }
 
   function renderBoard() {
@@ -152,20 +365,33 @@
       } else if (cell.kind === "tax") sub = "−" + cell.amount;
       else if (cell.kind === "chest" || cell.kind === "start") sub = "+" + (cell.amount || 100);
       const mark = prop.level === 2 ? "فندق" : prop.level === 1 ? "بيت" : "";
-      const tokens = here.map((p, n) =>
-        `<i class="city-token" style="background:${p.color};inset-inline-start:${2 + n * 12}px" title="${esc(p.name)}"></i>`
-      ).join("");
-      return `<div class="city-cell ${prop.mortgaged ? "is-mort" : ""} ${owner ? "is-owned" : ""}" style="grid-column:${pos.col};grid-row:${pos.row};background:${tint};--owner:${owner ? owner.color : "transparent"}" title="${esc(cell.name)}">
+      const hot = visual && visual.hop && visual.pos === cell.i;
+      const flags = [
+        prop.mortgaged ? "is-mort" : "",
+        owner ? "is-owned" : "",
+        hot ? "is-hot" : "",
+        hot && cell.i === 0 ? "is-pay" : "",
+        hot && visual.jail ? "is-jail" : "",
+      ].filter(Boolean).join(" ");
+      const tokens = here.map((p, n) => {
+        const hop = visual && visual.hop && visual.id === p.id ? " is-hop" : "";
+        return `<i class="city-token${hop}" style="background:${p.color};inset-inline-start:${2 + n * 12}px" title="${esc(p.name)}"></i>`;
+      }).join("");
+      return `<div class="city-cell ${flags}" data-i="${cell.i}" style="grid-column:${pos.col};grid-row:${pos.row};background:${tint};--owner:${owner ? owner.color : "transparent"}" title="${esc(cell.name)}">
         ${tokens}
         <b>${esc(cell.short)}</b>
         <small>${esc(sub)}</small>
         ${mark ? `<em>${mark}</em>` : ""}
       </div>`;
     }).join("");
-    const dice = state.lastDice
-      ? `<span class="die">${state.lastDice[0]}</span><span class="die">${state.lastDice[1]}</span>`
-      : `<span class="die">·</span><span class="die">·</span>`;
-    boardEl.innerHTML = cells + `<div class="city-center"><p>الدوران ${state.round} / ٤٠</p><div class="city-dice" aria-hidden="true">${dice}</div><small>بيوت ${state.bankHouses} · فنادق ${state.bankHotels}</small></div>`;
+    const faces = shownDice || state.lastDice;
+    const doubled = !!(faces && faces[0] === faces[1] && !diceRolling);
+    const dice = faces
+      ? faceDie(faces[0], diceRolling, doubled) + faceDie(faces[1], diceRolling, doubled)
+      : faceDie(0, false, false) + faceDie(0, false, false);
+    const note = faces && !diceRolling ? String(faces[0] + faces[1]) + (doubled ? " · زوج" : "") : "";
+    const diceLabel = faces && !diceRolling ? ` aria-label="النرد ${faces[0]} و${faces[1]}"` : ` aria-hidden="true"`;
+    boardEl.innerHTML = cells + `<div class="city-center"><p>الدوران ${state.round} / ٤٠</p><div class="city-dice"${diceLabel}>${dice}</div><p class="city-roll-note">${esc(note)}</p><small>بيوت ${state.bankHouses} · فنادق ${state.bankHotels}</small></div>`;
   }
 
   function renderPlayers() {
@@ -276,9 +502,11 @@
       <p>تعطي</p>
       <div class="xo-chips">${mine.map(streetButton("GIVE")).join("") || "<small>لا شارع حر</small>"}</div>
       <label>مال تعطيه <input id="trade-give-cash" type="number" min="0" step="10" value="${giveCash}" /></label>
+      <label>حرية تعطيها <input id="trade-give-free" type="number" min="0" max="${me.freedom}" step="1" value="${Math.min(giveFreedom, me.freedom)}" ${me.freedom ? "" : "disabled"} /></label>
       <p>تأخذ</p>
       <div class="xo-chips">${theirs.map(streetButton("TAKE")).join("") || "<small>لا شارع حر</small>"}</div>
       <label>مال تأخذه <input id="trade-take-cash" type="number" min="0" step="10" value="${takeCash}" /></label>
+      <label>حرية تأخذها <input id="trade-take-free" type="number" min="0" max="${other.freedom}" step="1" value="${Math.min(takeFreedom, other.freedom)}" ${other.freedom ? "" : "disabled"} /></label>
       <div class="xo-chips">
         <button type="submit" class="xo-chip on">أرسل العرض</button>
         <button type="button" class="xo-chip" data-act="TRADE_CLOSE">رجوع</button>
@@ -292,6 +520,8 @@
         to: tradeTo,
         giveCash: snap10(document.getElementById("trade-give-cash").value),
         takeCash: snap10(document.getElementById("trade-take-cash").value),
+        giveFreedom: countOf(document.getElementById("trade-give-free").value, me.freedom),
+        takeFreedom: countOf(document.getElementById("trade-take-free").value, other.freedom),
         giveProps: giveSet.slice(),
         takeProps: takeSet.slice(),
       });
@@ -316,6 +546,11 @@
   function snap10(value) {
     const n = Math.max(0, Math.floor(Number(value) || 0));
     return n - (n % 10);
+  }
+
+  function countOf(value, max) {
+    const n = Math.max(0, Math.floor(Number(value) || 0));
+    return Math.min(n, max == null ? n : max);
   }
 
   function render() {
@@ -346,6 +581,7 @@
     const res = CityRules.dispatch(state, action);
     if (!res.ok) {
       errorEl.textContent = CityRules.errorText(res.error);
+      playSound("error");
       return;
     }
     errorEl.textContent = "";
@@ -358,9 +594,19 @@
       takeSet = [];
       giveCash = 0;
       takeCash = 0;
+      giveFreedom = 0;
+      takeFreedom = 0;
     }
     syncStats();
     save();
+    const rolled = action.type === "ROLL" || action.type === "ROLL_OFF" || action.type === "JAIL_ROLL";
+    if (rolled && state.lastDice) {
+      busy = true;
+      visual = fx && fx.who != null ? { id: fx.who, pos: fx.from } : null;
+      render();
+      tumbleDice(fx);
+      return;
+    }
     if (fx && fx.path && fx.path.length && fx.who != null) {
       busy = true;
       visual = { id: fx.who, pos: fx.from };
@@ -369,21 +615,62 @@
       return;
     }
     visual = null;
+    cueAction(action);
+    if (state.phase === "end") playSound("win");
     render();
     queueBot();
   }
 
+  function tumbleDice(fx) {
+    const finalDice = state.lastDice.slice();
+    const spins = calmMotion() ? 2 : 7;
+    let tick = 0;
+    const spin = () => {
+      if (!state) return;
+      tick += 1;
+      if (tick < spins) {
+        shownDice = [1 + Math.floor(Math.random() * 6), 1 + Math.floor(Math.random() * 6)];
+        diceRolling = true;
+        playSound(tick === 1 ? "roll" : "tick");
+        render();
+        motionTimer = window.setTimeout(spin, calmMotion() ? 40 : 75);
+        return;
+      }
+      shownDice = null;
+      diceRolling = false;
+      playSound(finalDice[0] === finalDice[1] ? "double" : "land");
+      render();
+      if (fx && fx.path && fx.path.length && fx.who != null) {
+        motionTimer = window.setTimeout(() => stepFx(fx, 0), calmMotion() ? 40 : 160);
+        return;
+      }
+      busy = false;
+      if (state.phase === "end") playSound("win");
+      render();
+      queueBot();
+    };
+    spin();
+  }
+
   function stepFx(fx, index) {
+    if (!state) return;
     if (index >= fx.path.length) {
       busy = false;
       visual = null;
+      if (state.phase === "end") playSound("win");
       render();
       queueBot();
       return;
     }
-    visual = { id: fx.who, pos: fx.path[index] };
+    const cell = fx.path[index];
+    const jailed = !!(fx.jail && index === fx.path.length - 1);
+    visual = { id: fx.who, pos: cell, hop: !calmMotion(), jail: jailed };
+    if (jailed) playSound("jail");
+    else if (cell === 0) playSound("salary");
+    else playSound("step");
     render();
-    window.setTimeout(() => stepFx(fx, index + 1), 80);
+    const gap = calmMotion() ? 36 : jailed ? 280 : 170;
+    motionTimer = window.setTimeout(() => stepFx(fx, index + 1), gap);
   }
 
   function queueBot() {
@@ -409,10 +696,15 @@
     takeSet = [];
     giveCash = 0;
     takeCash = 0;
+    giveFreedom = 0;
+    takeFreedom = 0;
     auctionCell = null;
     bidValue = 10;
     visual = null;
     errorEl.textContent = "";
+    state.playedMs = state.playedMs || 0;
+    state.activeSince = null;
+    if (state.phase !== "end" && !document.hidden) state.activeSince = Date.now();
     syncStats();
     save();
     showPlay();
@@ -425,7 +717,10 @@
     if (!btn) return;
     draft.size = Number(btn.dataset.size);
     document.querySelectorAll("#city-size .xo-chip").forEach((el) => el.classList.toggle("on", el === btn));
-    if (draft.size !== 4) draft.teams = false;
+    if (draft.size !== 4) {
+      draft.teams = false;
+      if (sameSeats(TEAM_SEATS)) draft.seats = cloneSeats(FFA_SEATS);
+    }
     renderSeats();
     document.getElementById("city-ffa").classList.toggle("on", !draft.teams);
     document.getElementById("city-teams").classList.toggle("on", draft.teams);
@@ -434,7 +729,10 @@
   teamBox.addEventListener("click", (e) => {
     const btn = e.target.closest("[data-teams]");
     if (!btn) return;
-    draft.teams = btn.dataset.teams === "1";
+    const nextTeams = btn.dataset.teams === "1";
+    if (nextTeams && !draft.teams && sameSeats(FFA_SEATS)) draft.seats = cloneSeats(TEAM_SEATS);
+    if (!nextTeams && draft.teams && sameSeats(TEAM_SEATS)) draft.seats = cloneSeats(FFA_SEATS);
+    draft.teams = nextTeams;
     document.getElementById("city-ffa").classList.toggle("on", !draft.teams);
     document.getElementById("city-teams").classList.toggle("on", draft.teams);
     renderSeats();
@@ -488,6 +786,7 @@
   document.getElementById("city-quit").addEventListener("click", () => {
     if (state && state.phase !== "end" && !window.confirm("إنهاء المباراة الحالية؟")) return;
     window.clearTimeout(botTimer);
+    haltMotion();
     busy = false;
     state = null;
     clearSaved();
@@ -499,11 +798,16 @@
     if (!btn || busy || btn.disabled) return;
     const giveBox = document.getElementById("trade-give-cash");
     const takeBox = document.getElementById("trade-take-cash");
+    const giveFree = document.getElementById("trade-give-free");
+    const takeFree = document.getElementById("trade-take-free");
     if (giveBox) giveCash = snap10(giveBox.value);
     if (takeBox) takeCash = snap10(takeBox.value);
+    if (giveFree) giveFreedom = countOf(giveFree.value, Number(giveFree.max));
+    if (takeFree) takeFreedom = countOf(takeFree.value, Number(takeFree.max));
     const type = btn.dataset.act;
     if (type === "NEW") {
       window.clearTimeout(botTimer);
+      haltMotion();
       state = null;
       clearSaved();
       showSetup();
@@ -526,6 +830,7 @@
       tradeTo = Number(btn.dataset.cell);
       giveSet = [];
       takeSet = [];
+      takeFreedom = 0;
       renderActions();
       return;
     }
@@ -549,6 +854,13 @@
     apply(action);
   });
 
+  document.getElementById("city-sound").addEventListener("click", () => {
+    soundOn = !soundOn;
+    try { localStorage.setItem(SOUND_KEY, soundOn ? "1" : "0"); } catch (_) {}
+    paintSound();
+    if (soundOn) playSound("land");
+  });
+
   document.addEventListener("keydown", (e) => {
     if (!state || busy || coverEl && !coverEl.hidden) return;
     if (e.key !== " " && e.key !== "Enter") return;
@@ -558,6 +870,13 @@
     if (state.phase === "rolloff") { e.preventDefault(); apply({ type: "ROLL_OFF" }); }
   });
 
+  document.addEventListener("visibilitychange", () => {
+    if (!state) return;
+    if (document.hidden) save();
+    else resumePlayTime();
+  });
+
+  paintSound();
   renderSeats();
   const existing = loadSaved();
   if (existing) resumeBox.hidden = false;

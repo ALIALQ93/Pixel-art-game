@@ -72,7 +72,7 @@ function testRentColumns() {
   assert(C.rentOf(s, 1) === 20, "set rent " + C.rentOf(s, 1));
   s.props[1].level = 1;
   assert(C.rentOf(s, 1) === 40, "house");
-  assert(C.rentOf(s, 2) === 10, "bare sibling " + C.rentOf(s, 2));
+  assert(C.rentOf(s, 2) === 20, "bare sibling keeps set rent " + C.rentOf(s, 2));
   s.props[1].level = 0;
   s.props[2].mortgaged = true;
   assert(C.rentOf(s, 2) === 0, "mortgaged");
@@ -225,6 +225,70 @@ function testPlayout() {
   assert(s.winners && s.winners.length >= 1, "winners");
 }
 
+function testAuctionStep() {
+  let s = started();
+  s.participants[0].position = 19;
+  s = go(s, { type: "ROLL", dice: [1, 1] });
+  s = go(s, { type: "DECLINE" });
+  assert(s.auction.step === 1, "open step");
+  assert(s.auction.turn === 1, "next bidder");
+  s = go(s, { type: "BID", amount: 10 });
+  assert(s.auction && s.auction.step === 2, "handed step");
+  assert(s.auction.turn === 0, "back to lander");
+}
+
+function testBotSkipsFlatRent() {
+  let s = started();
+  s.phase = "manage";
+  s.participants[0].bot = true;
+  [6, 7, 8].forEach((i) => { s.props[i].owner = 0; });
+  const cell = C.BOARD[8];
+  const saved = cell.rent.slice();
+  cell.rent = [20, 40, 40, 220];
+  try {
+    const action = C.suggestBotAction(s);
+    assert(action && action.type === "BUILD", "builds");
+    assert(action.cell === 7, "skips flat rent " + (action && action.cell));
+  } finally {
+    cell.rent = saved;
+  }
+}
+
+function testCardKeepsPath() {
+  let s = started();
+  s.participants[0].position = 12;
+  s.deck.unshift({ id: "back3", name: "ارجع ثلاث خطوات" });
+  s = go(s, { type: "ROLL", dice: [1, 1] });
+  assert(s.participants[0].position === 11, "landed " + s.participants[0].position);
+  assert(s.fx && s.fx.from === 12, "path starts at roll");
+  assert(s.fx.path.join(",") === "13,14,13,12,11", s.fx.path.join(","));
+}
+
+function testJailKeepsPath() {
+  let s = started();
+  s.participants[0].position = 13;
+  s = go(s, { type: "ROLL", dice: [1, 1] });
+  assert(s.participants[0].position === 5, "jailed");
+  assert(s.fx && s.fx.jail === true, "jail flag");
+  assert(s.fx.from === 13 && s.fx.path.join(",") === "14,15,5", s.fx.path.join(","));
+}
+
+function testFreedomTradeRejectsFraction() {
+  let s = started();
+  s.phase = "manage";
+  s.participants[0].freedom = 1;
+  const res = C.dispatch(s, {
+    type: "OFFER_TRADE",
+    to: 1,
+    giveCash: 0,
+    takeCash: 0,
+    giveProps: [],
+    takeProps: [],
+    giveFreedom: 1.5,
+  });
+  assert(!res.ok && res.error === "trade", res.error);
+}
+
 function testRolloffTie() {
   let s = match();
   s = go(s, { type: "ROLL_OFF", dice: [3, 3] });
@@ -243,6 +307,11 @@ const tests = [
   testRentColumns,
   testEvenBuild,
   testAuctionPass,
+  testAuctionStep,
+  testBotSkipsFlatRent,
+  testCardKeepsPath,
+  testJailKeepsPath,
+  testFreedomTradeRejectsFraction,
   testBankruptcyTransfer,
   testScoreTie,
   testNetWorthFormula,

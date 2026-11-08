@@ -70,6 +70,7 @@
             <button type="button" class="xo-chip on" id="city-ffa" data-teams="0">الجميع ضد الجميع</button>
             <button type="button" class="xo-chip" id="city-teams" data-teams="1">فريقان · ١مع٢ ضد ٣مع٤</button>
           </div>
+          <p id="city-team-hint" class="city-hint" hidden>الفريق يلعب آلياً فقط إذا كان المقعدان آليين. المحفظة والدور مشتركان.</p>
         </div>
 
         <p class="xo-label">المقاعد</p>
@@ -83,7 +84,7 @@
           <ul>
             <li>كل جانب يبدأ بـ ٨٠٠. المرور بالانطلاق يقبض ١٠٠.</li>
             <li>من يرفض الشراء تُفتح مزايدة بخطوات ١٠. أعلى عرض يأخذ الشارع.</li>
-            <li>إيجار المجموعة يُدفع إذا ملكت الشوارع الثلاثة بلا بناء وبلا رهن.</li>
+            <li>الشارع بلا بناء يدفع إيجار المجموعة إذا ملكت اللون كاملاً وبلا رهن، حتى مع بناء على شارع آخر.</li>
             <li>البناء متوازن: بيت ثم فندق، وفرق الدرجات داخل اللون لا يتجاوز ١.</li>
             <li>ثلاثة أزواج متتالية ترسل إلى الحبس. الخروج بزوج، أو بـ ٥٠، أو ببطاقة حرية.</li>
             <li>بعد ٤٠ دوراناً يفوز الأعلى قيمة. الإفلاس يُخرج صاحبه فوراً.</li>
@@ -95,7 +96,10 @@
     <section id="city-play" hidden>
       <div class="city-top">
         <p id="city-status" class="city-status" aria-live="polite"></p>
-        <button type="button" class="city-quit" id="city-quit">إنهاء</button>
+        <div class="city-tools">
+          <button type="button" class="city-quit" id="city-sound" aria-pressed="true">صوت</button>
+          <button type="button" class="city-quit" id="city-quit">إنهاء</button>
+        </div>
       </div>
       <div id="city-board" class="city-board" aria-label="لوحة مدينة البكسل"></div>
       <div id="city-players" class="city-players"></div>
