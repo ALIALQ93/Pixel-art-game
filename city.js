@@ -356,7 +356,6 @@
       const pos = cellPos(cell.i);
       const prop = state.props[cell.i];
       const owner = prop.owner != null ? state.participants[prop.owner] : null;
-      const here = state.participants.filter((p) => p.alive && tokenPos(p) === cell.i);
       const tint = cell.group ? GCOLOR[cell.group] : "#fff";
       let sub = "";
       if (cell.kind === "street") {
@@ -373,12 +372,7 @@
         hot && cell.i === 0 ? "is-pay" : "",
         hot && visual.jail ? "is-jail" : "",
       ].filter(Boolean).join(" ");
-      const tokens = here.map((p, n) => {
-        const hop = visual && visual.hop && visual.id === p.id ? " is-hop" : "";
-        return `<i class="city-token${hop}" style="background:${p.color};inset-inline-start:${2 + n * 12}px" title="${esc(p.name)}"></i>`;
-      }).join("");
       return `<div class="city-cell ${flags}" data-i="${cell.i}" style="grid-column:${pos.col};grid-row:${pos.row};background:${tint};--owner:${owner ? owner.color : "transparent"}" title="${esc(cell.name)}">
-        ${tokens}
         <b>${esc(cell.short)}</b>
         <small>${esc(sub)}</small>
         ${mark ? `<em>${mark}</em>` : ""}
@@ -392,6 +386,100 @@
     const note = faces && !diceRolling ? String(faces[0] + faces[1]) + (doubled ? " · زوج" : "") : "";
     const diceLabel = faces && !diceRolling ? ` aria-label="النرد ${faces[0]} و${faces[1]}"` : ` aria-hidden="true"`;
     boardEl.innerHTML = cells + `<div class="city-center"><p>الدوران ${state.round} / ٤٠</p><div class="city-dice"${diceLabel}>${dice}</div><p class="city-roll-note">${esc(note)}</p><small>بيوت ${state.bankHouses} · فنادق ${state.bankHotels}</small></div>`;
+    syncMovers(true);
+  }
+
+  function cellCenter(i) {
+    const cell = boardEl.querySelector('[data-i="' + i + '"]');
+    if (!cell) return null;
+    const board = boardEl.getBoundingClientRect();
+    const rect = cell.getBoundingClientRect();
+    return {
+      x: rect.left - board.left + rect.width / 2,
+      y: rect.top - board.top + rect.height / 2,
+    };
+  }
+
+  function syncMovers(instant) {
+    if (!state) return;
+    let layer = boardEl.querySelector(".city-movers");
+    if (!layer) {
+      layer = document.createElement("div");
+      layer.className = "city-movers";
+      boardEl.appendChild(layer);
+    }
+    const groups = {};
+    state.participants.forEach((p) => {
+      if (!p.alive) return;
+      const pos = tokenPos(p);
+      if (!groups[pos]) groups[pos] = [];
+      groups[pos].push(p);
+    });
+    state.participants.forEach((p) => {
+      let el = layer.querySelector('[data-token="' + p.id + '"]');
+      if (!p.alive) {
+        if (el) el.remove();
+        return;
+      }
+      if (!el) {
+        el = document.createElement("i");
+        el.className = "city-mover is-instant";
+        el.dataset.token = String(p.id);
+        el.title = p.name;
+        layer.appendChild(el);
+      }
+      el.style.background = p.color;
+      const mates = groups[tokenPos(p)] || [p];
+      const n = mates.indexOf(p);
+      const center = cellCenter(tokenPos(p));
+      if (!center) return;
+      if (instant) el.classList.add("is-instant");
+      el.style.left = (center.x - 7 + (n - (mates.length - 1) / 2) * 12) + "px";
+      el.style.top = (center.y - 18) + "px";
+      if (instant) {
+        void el.offsetWidth;
+        el.classList.remove("is-instant");
+      } else if (visual && visual.hop && visual.id === p.id && !calmMotion()) {
+        el.classList.remove("is-hop");
+        void el.offsetWidth;
+        el.classList.add("is-hop");
+      }
+    });
+  }
+
+  function markLanding(cellIndex, jailed) {
+    boardEl.querySelectorAll(".city-cell.is-hot, .city-cell.is-pay, .city-cell.is-jail").forEach((el) => {
+      el.classList.remove("is-hot", "is-pay", "is-jail");
+    });
+    const cell = boardEl.querySelector('[data-i="' + cellIndex + '"]');
+    if (!cell) return;
+    cell.classList.add("is-hot");
+    if (cellIndex === 0) cell.classList.add("is-pay");
+    if (jailed) cell.classList.add("is-jail");
+  }
+
+  function paintDice() {
+    const faces = shownDice || state.lastDice;
+    const box = boardEl.querySelector(".city-dice");
+    const note = boardEl.querySelector(".city-roll-note");
+    if (!box || !faces) return;
+    const doubled = faces[0] === faces[1] && !diceRolling;
+    box.querySelectorAll(".die").forEach((die, i) => {
+      die.dataset.face = String(faces[i]);
+      die.setAttribute("aria-label", "نرد " + faces[i]);
+      die.classList.toggle("is-double", doubled);
+      die.classList.remove("is-rolling");
+      if (diceRolling) {
+        void die.offsetWidth;
+        die.classList.add("is-rolling");
+      }
+    });
+    if (note) note.textContent = diceRolling ? "" : String(faces[0] + faces[1]) + (doubled ? " · زوج" : "");
+    if (diceRolling) box.setAttribute("aria-hidden", "true");
+    else {
+      box.removeAttribute("aria-hidden");
+      box.setAttribute("aria-label", "النرد " + faces[0] + " و" + faces[1]);
+    }
   }
 
   function renderPlayers() {
@@ -602,6 +690,8 @@
     const rolled = action.type === "ROLL" || action.type === "ROLL_OFF" || action.type === "JAIL_ROLL";
     if (rolled && state.lastDice) {
       busy = true;
+      shownDice = [1 + Math.floor(Math.random() * 6), 1 + Math.floor(Math.random() * 6)];
+      diceRolling = true;
       visual = fx && fx.who != null ? { id: fx.who, pos: fx.from } : null;
       render();
       tumbleDice(fx);
@@ -632,16 +722,16 @@
         shownDice = [1 + Math.floor(Math.random() * 6), 1 + Math.floor(Math.random() * 6)];
         diceRolling = true;
         playSound(tick === 1 ? "roll" : "tick");
-        render();
-        motionTimer = window.setTimeout(spin, calmMotion() ? 40 : 75);
+        paintDice();
+        motionTimer = window.setTimeout(spin, calmMotion() ? 30 : 70);
         return;
       }
       shownDice = null;
       diceRolling = false;
       playSound(finalDice[0] === finalDice[1] ? "double" : "land");
-      render();
+      paintDice();
       if (fx && fx.path && fx.path.length && fx.who != null) {
-        motionTimer = window.setTimeout(() => stepFx(fx, 0), calmMotion() ? 40 : 160);
+        motionTimer = window.setTimeout(() => stepFx(fx, 0), calmMotion() ? 30 : 110);
         return;
       }
       busy = false;
@@ -665,11 +755,12 @@
     const cell = fx.path[index];
     const jailed = !!(fx.jail && index === fx.path.length - 1);
     visual = { id: fx.who, pos: cell, hop: !calmMotion(), jail: jailed };
+    markLanding(cell, jailed);
+    syncMovers(false);
     if (jailed) playSound("jail");
     else if (cell === 0) playSound("salary");
     else playSound("step");
-    render();
-    const gap = calmMotion() ? 36 : jailed ? 280 : 170;
+    const gap = calmMotion() ? 36 : jailed ? 240 : 210;
     motionTimer = window.setTimeout(() => stepFx(fx, index + 1), gap);
   }
 
@@ -681,11 +772,12 @@
     if (!actor || !actor.bot) return;
     const action = CityRules.suggestBotAction(state);
     if (!action) return;
+    const rolling = action.type === "ROLL" || action.type === "ROLL_OFF" || action.type === "JAIL_ROLL";
     busy = true;
     botTimer = window.setTimeout(() => {
       busy = false;
       apply(action);
-    }, 420);
+    }, calmMotion() ? 30 : rolling ? 200 : 120);
   }
 
   function begin(next) {
@@ -874,6 +966,10 @@
     if (!state) return;
     if (document.hidden) save();
     else resumePlayTime();
+  });
+
+  window.addEventListener("resize", () => {
+    if (state) syncMovers(true);
   });
 
   paintSound();
